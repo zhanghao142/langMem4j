@@ -1,6 +1,6 @@
 # langMem4j
 
-> Java 生态设计最干净的长期记忆管理中间件。
+> 为Java 生态设计的长期记忆管理中间件。
 
 为 LLM Agent 提供可插拔的长期记忆（Facts / Preferences / Patterns）读写与语义检索能力。
 可独立使用，也可作为 **LangChain4j** / **Spring AI** 的工具函数暴露给大模型。
