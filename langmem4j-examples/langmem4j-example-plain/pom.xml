@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j-examples</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-example-plain</artifactId>
+    <packaging>jar</packaging>
+
+    <name>langmem4j-example-plain</name>
+    <description>
+        Minimal Java SE example: instantiate InMemoryMemoryStore, save a few
+        memories, run a search, print results. No framework, runs on main().
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-core</artifactId>
+        </dependency>
+
+        <!--
+            tools-core: 纯 Java 的 Save/Search MemoryService，无 LangChain4j 依赖。
+            供不引 LangChain4j、想直接接 Spring AI / 自研 RPC 的项目用。
+            如果你走 LangChain4j @Tool 注解路线，就换成 langmem4j-tools。
+        -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-tools-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>

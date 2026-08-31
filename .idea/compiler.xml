@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="langmem4j-store-qdrant" />
+        <module name="langmem4j-tools" />
+        <module name="langmem4j-core" />
+        <module name="langmem4j-example-plain" />
+        <module name="langmem4j-tools-core" />
+        <module name="langmem4j-example-springboot" />
+      </profile>
+    </annotationProcessing>
+  </component>
+</project>

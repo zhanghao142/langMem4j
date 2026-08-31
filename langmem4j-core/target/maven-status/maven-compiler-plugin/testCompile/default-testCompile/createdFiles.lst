@@ -1,0 +1,6 @@
+com\langmem4j\core\memory\MemoryTest.class
+com\langmem4j\core\store\inmemory\InMemoryMemoryStoreFilterTest.class
+com\langmem4j\core\store\inmemory\InMemoryMemoryStoreTest.class
+com\langmem4j\core\manager\MemoryManagerTest.class
+com\langmem4j\core\store\MemoryFilterTest.class
+com\langmem4j\core\store\inmemory\CosineSearchTest.class

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j-examples</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-example-springboot</artifactId>
+    <packaging>jar</packaging>
+
+    <name>langmem4j-example-springboot</name>
+    <description>
+        ⚠️ SKELETON (占位骨架).
+        Spring Boot 接入示例的 pom 坐标，用于后续扩展：@Bean MemoryStore + injected
+        Tools + HTTP endpoints。当前没有 @SpringBootApplication main class，因此
+        spring-boot:repackage 被本 pom 明确 skip —— 不要在此状态下打可执行 jar。
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-tools</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <!-- SKELETON: no @SpringBootApplication main class yet. -->
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

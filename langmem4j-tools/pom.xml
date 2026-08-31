@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-tools</artifactId>
+    <packaging>jar</packaging>
+
+    <name>langmem4j-tools</name>
+    <description>
+        LangChain4j {@code @Tool} wrappers exposing save / search memory
+        operations to any LLM agent via function call.
+        &lt;p&gt;
+        All business logic (string parsing, metadata formatting, I/O
+        orchestration) lives in the framework-free
+        {@code langmem4j-tools-core} sibling module; this module only adds
+        the {@code @Tool}/{@code @P} annotation layer and a one-line
+        delegation to {@code SaveMemoryService} / {@code SearchMemoryService}.
+    </description>
+
+    <!--
+        Allowed dependencies: langmem4j-core + langchain4j only.
+        No Qdrant, no Spring. Tools operate against the MemoryStore SPI.
+    -->
+    <dependencies>
+        <!-- The real logic lives in this framework-free module. -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-tools-core</artifactId>
+        </dependency>
+
+        <!-- LangChain4j is used ONLY for @Tool/@P annotations and LLM
+             function-call binding; no implementation details depend on it. -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

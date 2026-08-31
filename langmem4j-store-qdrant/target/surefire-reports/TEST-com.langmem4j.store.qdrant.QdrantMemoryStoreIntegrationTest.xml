@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.langmem4j.store.qdrant.QdrantMemoryStoreIntegrationTest" time="0.002" tests="4" errors="0" skipped="4" failures="0">
+  <properties/>
+  <testcase name="search_with_memoryFilter_restricts_to_metadata" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreIntegrationTest" time="0.0">
+    <skipped message="Enable manually when a Qdrant instance is available on localhost:6334"/>
+  </testcase>
+  <testcase name="search_returns_cosine_ranked_results" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreIntegrationTest" time="0.0">
+    <skipped message="Enable manually when a Qdrant instance is available on localhost:6334"/>
+  </testcase>
+  <testcase name="delete_and_list_keys" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreIntegrationTest" time="0.0">
+    <skipped message="Enable manually when a Qdrant instance is available on localhost:6334"/>
+  </testcase>
+  <testcase name="upsert_get_round_trip" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreIntegrationTest" time="0.0">
+    <skipped message="Enable manually when a Qdrant instance is available on localhost:6334"/>
+  </testcase>
+</testsuite>
