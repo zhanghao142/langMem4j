@@ -14,9 +14,14 @@
 - **Search 自带 Metadata Filter（V1 已支持）** — SPI 统一暴露 `MemoryStore.search(ns, query, limit, MemoryFilter)`，所有实现均承诺 AND 语义 metadata 过滤 + minScore：
   - InMemoryMemoryStore：排序前先剪候选（零网络成本，最严格）
   - QdrantMemoryStore：V1 以探针 limit×10 + 客户端 `MemoryFilter.matchesMetadata()` 精过滤实现；proto 表面稳定后补 `setFilter()` 服务端下推（接口签名不变）
-- **零依赖运行时** — core / tools-core 模块只有 `slf4j-api`，生产接入 Qdrant 也仅引入官方 gRPC client
+- **时间驱动的记忆衰减/交融（V1 已支持）**
+  - `MemoryDecayPolicy.exponential(halfLife)`：按「lastAccessedAt 离现在多久」给每条记忆打 0-1 的新鲜度因子；search 结果会按 factor 重排；低于 `pruneThreshold()`（默认 1%）的记忆自动从结果中隐藏；`get()` 命中会 refresh lastAccessedAt（「访问一次就延长寿命」）
+  - `MemoryMergePolicy.keyMerge()`：同 key 重写时保留更具体的 value、union metadata、保留最早的 createdAt、刷新 lastAccessedAt、优先 incoming embedding
+  - 两个都是 `@FunctionalInterface`，`NONE` 默认行为不变，升级零感知
+- **零依赖运行时** — core / tools-core 模块只有 `slf4j-api`，生产接入 Qdrant 也仅引入官方 gRPC client；langgraph4j adapter 仅引入 `org.bsc.langgraph4j:langgraph4j-core`
 - **开箱即用** — 内置 `InMemoryMemoryStore`，单元测试 / 原型开发不需要任何外部基础设施
 - **工具层与框架解耦** — LLM 业务语义（save/search/get/list/delete 的 string 出入参、key=value metadata 解析、limit clamp）放在 `langmem4j-tools-core`（纯 Java）；`langmem4j-tools` 只做 1 行的 LangChain4j `@Tool`/`@P` 薄封装，切换 Spring AI / Semantic Kernel / 自研 JSON-RPC 都无需重复造轮子
+- **langgraph4j Store SPI 适配器（langmem4j-langgraph4j）**：把 langgraph4j InMemoryStore / RedisStore / 任何 `org.bsc.langgraph4j.store.Store` 直接当 langMem4j 后端用，decay / merge / search MemoryFilter 在 MemoryManager 层全部生效
 
 ---
 
@@ -25,17 +30,23 @@
 ```
 langmem4j/
 ├── langmem4j-core              ← 必选：主依赖
-│   ├── memory/Memory.java                 // 不可变 record
+│   ├── memory/Memory.java                 // 不可变 record（7 参：ns/key/value/metadata/embeddingVector/createdAt/lastAccessedAt）
+│   ├── memory/MemoryDecayPolicy.java      // SPI ：decayFactor(createdAt,lastAccessedAt,now) + NONE + exponential(halfLife) + default pruneThreshold()
+│   ├── memory/MemoryMergePolicy.java      // SPI ：merge(existing,incoming) + NONE + keyMerge()
 │   ├── embedding/EmbeddingGenerator.java  // 向量生成 SPI
 │   ├── store/MemoryStore.java             // 存储 SPI（search 已含 MemoryFilter）
 │   ├── store/MemoryFilter.java            // metadata + minScore 过滤
 │   ├── store/inmemory/InMemoryMemoryStore.java
-│   └── manager/MemoryManager.java         // ✅ 你每天会调用的门面类
+│   └── manager/MemoryManager.java         // ✅ 你每天会调用的门面类（withDecayPolicy() / withMergePolicy() 新增 Builder 入口）
 │
 ├── langmem4j-store-qdrant       ← 可选：Qdrant 向量数据库存储适配器
-│   └── （collection = namespace，payload 展平，filter 原生下推）
+│   └── （collection = namespace，payload 展平，filter V1 探针 10× 客户端精过滤）
 │
-├── langmem4j-tools-core         ← 可选：无框架依赖的 LLM 服务层 ✨ 新模块
+├── langmem4j-langgraph4j        ← 可选：langgraph4j Store SPI 适配器 ✨ 新模块
+│   ├── LangGraph4jStoreAdapter          // Store → MemoryStore 双向映射（upsert/get/delete/search）
+│   └── StoreDecayMergeDemo              // 端到端验证 decay 重排序 + merge 语义（可执行 main）
+│
+├── langmem4j-tools-core         ← 可选：无框架依赖的 LLM 服务层
 │   ├── SaveMemoryService        // save / saveWithMetadata / delete
 │   └── SearchMemoryService      // get / search + metadataFilter / list
 │
@@ -84,13 +95,22 @@ langmem4j/
     <artifactId>langmem4j-store-qdrant</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
+
+<!-- 可选：用 langgraph4j 的 Store SPI 作后端（org.bsc.langgraph4j:langgraph4j-core:1.8.25 已在父 POM 管版本） -->
+<dependency>
+    <groupId>com.langmem4j</groupId>
+    <artifactId>langmem4j-langgraph4j</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
 ```
 
-### 1. 3 行代码跑起来（InMemory + Metadata Filter）
+### 1. 3 行代码跑起来（InMemory + Metadata Filter + Decay / Merge）
 
 ```java
 MemoryManager manager = MemoryManager.inMemory()
         .withDefaultNamespace("user_alice")
+        .withDecayPolicy(MemoryDecayPolicy.exponential())   // 7 天半衰期；搜索结果按新鲜度重排
+        .withMergePolicy(MemoryMergePolicy.keyMerge())       // 同 key 重写：保留更具体的 value + union metadata
         .build();
 
 manager.add("food",  "Alice loves hot pot",       Map.of("category", "preference", "source", "chat"));
@@ -106,7 +126,7 @@ List<Memory> pref = manager.search("Alice", 10,
 // pref 只包含 "Alice loves hot pot"
 ```
 
-### 2. 5 行代码上 Qdrant（含服务端 metadata filter 下推）
+### 2. 5 行代码上 Qdrant（V1 探针 limit×10 + 客户端精过滤）
 
 ```java
 // 1. 向量生成器
@@ -151,7 +171,41 @@ Qdrant 一行启动：
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-### 3. 暴露给大模型（两种方式任选）
+### 3. 把 langgraph4j 的 Store 当后端（+ Decay / Merge 两行接入）
+
+你已经在用 `org.bsc.langgraph4j` 做 Agent 状态机？把它的 `InMemoryStore` / `RedisStore` / 任何 Store 直接塞给 `LangGraph4jStoreAdapter` 就行，MemoryManager 在上层负责 decay、merge、MemoryFilter 三件事：
+
+```java
+// 1. new 任何一种 langgraph4j Store
+Store langgraphStore = new InMemoryStore();
+
+// 2. 包装成 langMem4j 的 MemoryStore
+MemoryStore store = new LangGraph4jStoreAdapter(langgraphStore);
+
+// 3. MemoryManager 开 decay + merge（两行）
+MemoryManager manager = MemoryManager.withStore(store)
+        .withDefaultNamespace("user_alice")
+        .withDecayPolicy(MemoryDecayPolicy.exponential())   // 7 天半衰期（半衰之后 factor=0.5）
+        .withMergePolicy(MemoryMergePolicy.keyMerge())       // 同 key 重写时取更具体的 value + union metadata
+        .build();
+
+// 之后 add()/search()/get()/remove() 用法和其他 backend 一模一样：
+//   · add("pref", "Alice likes hot pot") 两次 → keyMerge() 合成一条
+//   · search() 结果会自动按 decay factor 重排；老记忆排后面；死记忆（factor<1%）直接被剪掉
+//   · get() 命中时自动 refresh lastAccessedAt → "访问一次就延长寿命"
+```
+
+端到端 demo（2 秒半衰期，Thread.sleep 2000 肉眼可见 decay 重排）：
+
+```bash
+mvn -pl langmem4j-langgraph4j -am install -DskipTests -q
+mvn -pl langmem4j-langgraph4j org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
+    -Dexec.mainClass=com.langmem4j.store.langgraph4j.StoreDecayMergeDemo
+```
+
+> **listKeys / clearNamespace 兼容性提示**：langgraph4j 的 Store SPI 没有公开这两个方法，所以 `LangGraph4jStoreAdapter` 会抛 `UnsupportedOperationException`（demo 里有验证）。需要清数据时对已知 key 逐个 deleteByKey 即可，或等 langgraph4j 官方 API 升级。
+
+### 4. 暴露给大模型（两种方式任选）
 
 #### 方式 A：用 LangChain4j @Tool（零代码接入）
 
@@ -187,13 +241,13 @@ String hits = search.searchMemory("food", 5, "category=preference");
 
 | | langMem4j | mem4j / Mem0 |
 |---|---|---|
-| **语言** | 原生 Java 17+，字节级与 Spring / LangChain4j 互通 | Python 为主，Java 侧通常走 REST + 二次序列化 |
-| **设计** | 两个 SPI + 一个门面；**core + tools-core 运行时零框架依赖** | 大而全的一体化 SDK，强绑定具体 Vector DB / LLM Provider |
-| **入口** | `MemoryManager.add()`，一行生成 embedding + 写入；search 原生 metadata filter | 需要你手动组合 `Memory + Embedding + Store` 三层对象 |
-| **工具层** | LangChain4j 独立模块 + 纯 Java `tools-core`，可切 Spring AI / 自研桥接不重复代码 | 仅随官方框架发布 |
-| **测试友好** | `InMemoryMemoryStore` 开箱即测，几毫秒跑完 100+ 单测 | 常需起容器或 mock 整个 client 层 |
+| **语言** | 原生 Java 17+，字节级与 Spring / LangChain4j / langgraph4j 互通 | Python 为主，Java 侧通常走 REST + 二次序列化 |
+| **设计** | 四个 SPI（`MemoryStore` / `EmbeddingGenerator` / `MemoryDecayPolicy` / `MemoryMergePolicy`）+ 一个门面；**core + tools-core 运行时零框架依赖** | 大而全的一体化 SDK，强绑定具体 Vector DB / LLM Provider，decay 常要自己改 |
+| **入口** | `MemoryManager.add()`，一行生成 embedding + 写入；search 自带 metadata filter / decay 重排序 / key-merge | 需要你手动组合 `Memory + Embedding + Store` 三层对象，还得自己写过期淘汰 |
+| **工具层** | LangChain4j 独立模块 + 纯 Java `tools-core`，可切 Spring AI / langgraph4j / 自研桥接不重复代码 | 仅随官方框架发布 |
+| **测试友好** | `InMemoryMemoryStore` / `langgraph4j InMemoryStore` 开箱即测，几毫秒跑完 130+ 单测 | 常需起容器或 mock 整个 client 层 |
 
-一句话：**langMem4j 是 Java 开发者的"够用就好"记忆层 — 只做 SPI + 门面 + 少量生产级适配，不把你绑死在任何一家 LLM / DB 上。**
+一句话：**langMem4j 是 Java 开发者的"够用就好"记忆层 — SPI + 门面 + 时间驱动策略（decay / merge）+ 多后端适配，不把你绑死在任何一家 LLM / DB 上。**
 
 ---
 
@@ -217,15 +271,16 @@ mvn -pl langmem4j-examples/langmem4j-example-plain \
 #   docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-当前测试矩阵（`mvn test`，**102 个单测全绿 ✅**，另有 8 个 `@Disabled` 预留方法）：
+当前测试矩阵（`mvn test`，**135 个单测全绿 ✅**，另有 8 个 `@Disabled` 预留方法）：
 
 | 模块 | 测试方法数 | 核心覆盖点 |
 |---|---|---|
-| langmem4j-core | **66 passed** | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · MemoryManager (15) · **MemoryFilter** (11，含 null-required、类型严格) · **InMemoryMemoryStore-Filter** (5，排序前剪候选) |
+| langmem4j-core | **96 passed** | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · **MemoryManager (24，新增 9：decay filter / 重排序 / NONE / get 刷新 lastAccessedAt / merge longer / union / overwrite / earliest createdAt / addAll merge)** · **MemoryFilter** (11) · **InMemoryMemoryStore-Filter** (5) · **MemoryDecayPolicy (11：NONE identity / 1H & 2H 半衰曲线 / lastAccessedAt 优先 createdAt / custom halfLife / pruneThreshold 可 override)** · **MemoryMergePolicy (10：NONE identity / longer value / metadata union / earliest createdAt / ~now lastAccessedAt / incoming-embedding / fallback / 不 mutate 输入)** |
 | langmem4j-store-qdrant | 4 passed **+ 4 @Disabled** | QdrantMemoryStoreTest：deterministicId 纯函数 4 条（FNV×32/64/utf16-leak/中文）；另有 4 条集成测试方法 **@Disabled**（见下） |
+| **langmem4j-langgraph4j** | **7 passed** | LangGraph4jStoreAdapterTest：①upsert+get round-trip（含 namespace 非空 / createdAt 时间戳 / embedding 恒 null）②getByKey 不存在 → empty ③deleteByKey → 空 ④search 关键词匹配（fruit 2 条 / blue 1 条）⑤search limit=3 精确裁 ⑥listKeys 抛 UOE ⑦clearNamespace 抛 UOE |
 | langmem4j-tools-core | **14 passed** | SaveMemoryService (6：构造校验 / KV 解析 / 布尔标签 / 空 metadata / 删除 / ns accessor)；SearchMemoryService (8：get 命中/缺失 / substring / 空消息 / limit clamp 4 边界 × 含 >20→20 / **metadata filter 搜索** / list 空+非空 / accessor) |
 | langmem4j-tools | **14 passed** | SaveMemoryTool (7，薄封装正确委托 + **namespace 隔离**)；SearchMemoryTool (7，薄封装正确委托) |
-| **合计** | **102 passed · 8 skipped · 0 failures** | 全绿 ✅ |
+| **合计** | **135 passed · 8 skipped · 0 failures** | 全绿 ✅ |
 
 > **集成测试状态**：V1 交付了代码与 `@Disabled` 占位文件 `QdrantMemoryStoreIntegrationTest`（4 个 E2E 方法：①upsert+get round-trip（metadata 还原）②search 余弦排序 ③**search + MemoryFilter 过滤**（category=drink 精确命中）④delete + listKeys 清理验证）。本地跑：
 > ```bash
@@ -240,12 +295,15 @@ mvn -pl langmem4j-examples/langmem4j-example-plain \
 
 - [x] Core SPI + InMemory 实现 + MemoryManager 门面
 - [x] **MemoryFilter（metadata + minScore）** SPI 级支持 + InMemory/Qdrant 落地
+- [x] **MemoryDecayPolicy（指数半衰 + pruneThreshold 可 override + get() 刷新 lastAccessedAt）** + **MemoryMergePolicy（keyMerge 语义 / NONE 默认）**
 - [x] Qdrant 适配器（V1：探针 limit×10 + 客户端 `MemoryFilter.matchesMetadata()` 精过滤；MemoryFilter SPI 语义 100% 一致；proto 稳定后补 `setFilter` 服务端下推）+ 集成测试占位
+- [x] **langgraph4j Store 适配器（`langmem4j-langgraph4j`）**：`InMemoryStore` / 任何 `org.bsc.langgraph4j.store.Store` 直接当后端；decay / merge / MemoryFilter 在门面层统一
 - [x] **langmem4j-tools-core（纯 Java）** + **langmem4j-tools（LangChain4j）** 分层
 - [x] Plain Java 示例（example-plain）
 - [ ] Spring Boot 示例（`example-springboot` 目前还是 pom 骨架）
 - [ ] Spring Boot Starter：`@EnableLangMem4j` 自动装配
 - [ ] Milvus / PGVector 适配（等首个真实用户需求）
+- [ ] **语义级 dedup（目前 MemoryMergePolicy 只有 keyMerge，真正 semantic 需要 search 余弦相似度阈值）**
 - [ ] Memory Evolve：定期让 LLM 合并 / 淘汰过期记忆（Functional Core 层，无状态）
 
 ---
