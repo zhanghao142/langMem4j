@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.langmem4j.store.langgraph4j.LangGraph4jStoreAdapterTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.109 s -- in com.langmem4j.store.langgraph4j.LangGraph4jStoreAdapterTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.115 s -- in com.langmem4j.store.langgraph4j.LangGraph4jStoreAdapterTest

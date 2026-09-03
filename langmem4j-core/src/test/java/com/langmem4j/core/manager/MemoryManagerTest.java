@@ -3,6 +3,7 @@ package com.langmem4j.core.manager;
 import com.langmem4j.core.embedding.EmbeddingGenerator;
 import com.langmem4j.core.memory.Memory;
 import com.langmem4j.core.memory.MemoryDecayPolicy;
+import com.langmem4j.core.memory.MemoryCompactionPolicy;
 import com.langmem4j.core.memory.MemoryMergePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -409,5 +410,99 @@ class MemoryManagerTest {
 
         Memory stored = manager.get("ns", "k").orElseThrow();
         assertThat(stored.createdAt()).isEqualTo(early);
+    }
+
+    // ================================================================
+    // Compaction policy tests
+    // ================================================================
+
+    @Test
+    void compact_with_NONE_is_noop() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .build();
+
+        manager.add("a", "value A", Map.of("category", "food"));
+        manager.add("b", "value B", Map.of("category", "food"));
+        manager.compact();
+
+        // Both memories still exist
+        assertThat(manager.keys()).hasSize(2);
+        assertThat(manager.get("a")).isPresent();
+        assertThat(manager.get("b")).isPresent();
+    }
+
+    @Test
+    void compact_with_categoryGroup_merges_same_category() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withCompactionPolicy(MemoryCompactionPolicy.categoryGroup())
+                .build();
+
+        manager.add("a", "Alice likes hot pot",    Map.of("category", "food"));
+        manager.add("b", "Alice likes iced tea",   Map.of("category", "food"));
+        manager.add("c", "Alice has a cat",        Map.of("category", "pet"));
+
+        manager.compact();
+
+        // 2 food → 1 compacted, 1 pet → stays
+        assertThat(manager.keys()).hasSize(2);
+
+        Memory food = manager.get("food_compacted").orElseThrow();
+        assertThat(food.value()).contains("hot pot");
+        assertThat(food.value()).contains("iced tea");
+        assertThat(food.metadata()).containsEntry("category", "food");
+        assertThat(food.metadata()).containsEntry("compacted", true);
+
+        Memory pet = manager.get("c").orElseThrow();
+        assertThat(pet.value()).isEqualTo("Alice has a cat");
+    }
+
+    @Test
+    void compact_deletes_old_memories() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withCompactionPolicy(MemoryCompactionPolicy.categoryGroup())
+                .build();
+
+        manager.add("k1", "v1", Map.of("category", "x"));
+        manager.add("k2", "v2", Map.of("category", "x"));
+
+        manager.compact();
+
+        // Old keys deleted, new key created
+        assertThat(manager.get("k1")).isEmpty();
+        assertThat(manager.get("k2")).isEmpty();
+        assertThat(manager.get("x_compacted")).isPresent();
+    }
+
+    @Test
+    void compact_empty_namespace_is_noop() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withCompactionPolicy(MemoryCompactionPolicy.categoryGroup())
+                .build();
+
+        manager.compact(); // should not throw
+        assertThat(manager.keys()).isEmpty();
+    }
+
+    @Test
+    void compact_preserves_earliest_createdAt() {
+        long early = 1_000_000L;
+        long late = 2_000_000L;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withCompactionPolicy(MemoryCompactionPolicy.categoryGroup())
+                .build();
+
+        manager.add(new Memory("ns", "k1", "v1", Map.of("category", "x"), null, early, early));
+        manager.add(new Memory("ns", "k2", "v2", Map.of("category", "x"), null, late, late));
+
+        manager.compact();
+
+        Memory compacted = manager.get("x_compacted").orElseThrow();
+        assertThat(compacted.createdAt()).isEqualTo(early);
     }
 }

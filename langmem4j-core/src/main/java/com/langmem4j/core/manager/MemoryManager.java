@@ -2,6 +2,7 @@ package com.langmem4j.core.manager;
 
 import com.langmem4j.core.embedding.EmbeddingGenerator;
 import com.langmem4j.core.memory.Memory;
+import com.langmem4j.core.memory.MemoryCompactionPolicy;
 import com.langmem4j.core.memory.MemoryDecayPolicy;
 import com.langmem4j.core.memory.MemoryMergePolicy;
 import com.langmem4j.core.store.MemoryFilter;
@@ -10,6 +11,7 @@ import com.langmem4j.core.store.inmemory.InMemoryMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,7 @@ public class MemoryManager {
     private final String defaultNamespace;
     private final MemoryDecayPolicy decayPolicy;
     private final MemoryMergePolicy mergePolicy;
+    private final MemoryCompactionPolicy compactionPolicy;
 
     private MemoryManager(Builder builder) {
         this.store = builder.store;
@@ -57,6 +60,7 @@ public class MemoryManager {
         this.defaultNamespace = builder.defaultNamespace;
         this.decayPolicy = builder.decayPolicy;
         this.mergePolicy = builder.mergePolicy;
+        this.compactionPolicy = builder.compactionPolicy;
     }
 
     // ================================================================
@@ -89,6 +93,7 @@ public class MemoryManager {
         private String defaultNamespace;
         private MemoryDecayPolicy decayPolicy = MemoryDecayPolicy.NONE;
         private MemoryMergePolicy mergePolicy = MemoryMergePolicy.NONE;
+        private MemoryCompactionPolicy compactionPolicy = MemoryCompactionPolicy.NONE;
 
         Builder store(MemoryStore store) { this.store = store; return this; }
 
@@ -133,6 +138,16 @@ public class MemoryManager {
          */
         public Builder withMergePolicy(MemoryMergePolicy policy) {
             this.mergePolicy = policy == null ? MemoryMergePolicy.NONE : policy;
+            return this;
+        }
+
+        /**
+         * Sets the compaction policy used by {@link MemoryManager#compact} to
+         * summarize fragmented memories into fewer, denser records. Default is
+         * {@link MemoryCompactionPolicy#NONE} (no compaction).
+         */
+        public Builder withCompactionPolicy(MemoryCompactionPolicy policy) {
+            this.compactionPolicy = policy == null ? MemoryCompactionPolicy.NONE : policy;
             return this;
         }
 
@@ -362,6 +377,72 @@ public class MemoryManager {
     /** Returns the configured merge policy (never null). */
     public MemoryMergePolicy mergePolicy() {
         return mergePolicy;
+    }
+
+    /** Returns the configured compaction policy (never null). */
+    public MemoryCompactionPolicy compactionPolicy() {
+        return compactionPolicy;
+    }
+
+    // ================================================================
+    // Compaction API
+    // ================================================================
+
+    /**
+     * Compacts (summarizes) all memories in the given namespace.
+     * <p>
+     * Fetches all memories via {@code listKeys + getByKey}, runs them through
+     * the configured {@link MemoryCompactionPolicy}, then deletes all old
+     * memories and stores the compacted replacements. Embeddings are
+     * re-generated for compacted memories if an {@link EmbeddingGenerator} is
+     * configured.
+     * <p>
+     * If the compaction policy is {@link MemoryCompactionPolicy#NONE}, this
+     * method is a no-op.
+     * <p>
+     * <b>Requires {@link MemoryStore#listKeys(String)} support.</b>
+     * The {@code LangGraph4jStoreAdapter} does not implement {@code listKeys}
+     * (the langgraph4j Store SPI has no equivalent method) and will throw
+     * {@link UnsupportedOperationException}. Use {@code compact()} only with
+     * {@code InMemoryMemoryStore} or {@code QdrantMemoryStore} backends.
+     *
+     * @param namespace the namespace to compact
+     */
+    public void compact(String namespace) {
+        if (compactionPolicy == MemoryCompactionPolicy.NONE) return;
+
+        List<String> keys = store.listKeys(namespace);
+        if (keys.isEmpty()) return;
+
+        List<Memory> all = new ArrayList<>();
+        for (String key : keys) {
+            store.getByKey(namespace, key).ifPresent(all::add);
+        }
+        if (all.isEmpty()) return;
+
+        List<Memory> compacted = compactionPolicy.compact(namespace, all);
+        log.info("compact ns={} before={} after={}", namespace, all.size(), compacted.size());
+
+        // Delete all old memories
+        for (Memory m : all) {
+            store.deleteByKey(namespace, m.key());
+        }
+
+        // Store compacted replacements (with embedding if generator available)
+        for (Memory m : compacted) {
+            Memory toStore = m;
+            if (m.embeddingVector() == null && embeddingGenerator != null) {
+                toStore = m.withEmbedding(embeddingGenerator.embed(m.value()));
+            }
+            store.upsert(namespace, toStore);
+        }
+    }
+
+    /**
+     * Compacts memories in the default namespace.
+     */
+    public void compact() {
+        compact(defaultNs());
     }
 
     // ================================================================

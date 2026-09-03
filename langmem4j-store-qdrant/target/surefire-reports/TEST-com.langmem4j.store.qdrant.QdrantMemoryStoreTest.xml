@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.071" tests="4" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.09" tests="4" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="CN"/>
     <property name="sun.boot.library.path" value="C:\Users\16080\.jdks\ms-21.0.11\bin"/>
-    <property name="sun.java.command" value="C:\Users\16080\AppData\Local\Temp\surefire3062183394846370675\surefirebooter-20260903185857134_7.jar C:\Users\16080\AppData\Local\Temp\surefire3062183394846370675 2026-09-03T18-58-55_753-jvmRun1 surefire-20260903185857134_5tmp surefire_1-20260903185857134_6tmp"/>
+    <property name="sun.java.command" value="C:\Users\16080\AppData\Local\Temp\surefire10704592381907556435\surefirebooter-20260903221342443_7.jar C:\Users\16080\AppData\Local\Temp\surefire10704592381907556435 2026-09-03T22-13-40_690-jvmRun1 surefire-20260903221342443_5tmp surefire_1-20260903221342443_6tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="D:\langMem4j\langmem4j-store-qdrant\target\test-classes;D:\langMem4j\langmem4j-store-qdrant\target\classes;D:\langMem4j\langmem4j-core\target\classes;C:\Users\16080\.m2\repository\io\qdrant\client\1.19.0\client-1.19.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-protobuf\1.83.0\grpc-protobuf-1.83.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-api\1.83.0\grpc-api-1.83.0.jar;C:\Users\16080\.m2\repository\com\google\code\findbugs\jsr305\3.0.2\jsr305-3.0.2.jar;C:\Users\16080\.m2\repository\com\google\protobuf\protobuf-java\3.25.9\protobuf-java-3.25.9.jar;C:\Users\16080\.m2\repository\com\google\api\grpc\proto-google-common-protos\2.64.1\proto-google-common-protos-2.64.1.jar;C:\Users\16080\.m2\repository\com\google\guava\guava\33.6.0-android\guava-33.6.0-android.jar;C:\Users\16080\.m2\repository\com\google\guava\failureaccess\1.0.3\failureaccess-1.0.3.jar;C:\Users\16080\.m2\repository\com\google\guava\listenablefuture\9999.0-empty-to-avoid-conflict-with-guava\listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar;C:\Users\16080\.m2\repository\org\jspecify\jspecify\0.3.0\jspecify-0.3.0.jar;C:\Users\16080\.m2\repository\com\google\j2objc\j2objc-annotations\3.1\j2objc-annotations-3.1.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-protobuf-lite\1.83.0\grpc-protobuf-lite-1.83.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-stub\1.83.0\grpc-stub-1.83.0.jar;C:\Users\16080\.m2\repository\org\codehaus\mojo\animal-sniffer-annotations\1.27\animal-sniffer-annotations-1.27.jar;C:\Users\16080\.m2\repository\com\google\errorprone\error_prone_annotations\2.50.0\error_prone_annotations-2.50.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-netty-shaded\1.83.0\grpc-netty-shaded-1.83.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-util\1.83.0\grpc-util-1.83.0.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-core\1.83.0\grpc-core-1.83.0.jar;C:\Users\16080\.m2\repository\com\google\code\gson\gson\2.10.1\gson-2.10.1.jar;C:\Users\16080\.m2\repository\com\google\android\annotations\4.1.1.4\annotations-4.1.1.4.jar;C:\Users\16080\.m2\repository\io\grpc\grpc-context\1.83.0\grpc-context-1.83.0.jar;C:\Users\16080\.m2\repository\io\perfmark\perfmark-api\0.27.0\perfmark-api-0.27.0.jar;C:\Users\16080\.m2\repository\org\slf4j\slf4j-api\2.0.16\slf4j-api-2.0.16.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter\5.11.0\junit-jupiter-5.11.0.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.5\junit-jupiter-api-5.10.5.jar;C:\Users\16080\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\16080\.m2\repository\org\junit\platform\junit-platform-commons\1.10.5\junit-platform-commons-1.10.5.jar;C:\Users\16080\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.5\junit-jupiter-params-5.10.5.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.5\junit-jupiter-engine-5.10.5.jar;C:\Users\16080\.m2\repository\org\junit\platform\junit-platform-engine\1.10.5\junit-platform-engine-1.10.5.jar;C:\Users\16080\.m2\repository\org\assertj\assertj-core\3.26.3\assertj-core-3.26.3.jar;C:\Users\16080\.m2\repository\net\bytebuddy\byte-buddy\1.14.19\byte-buddy-1.14.19.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\16080\AppData\Local\Temp\surefire3062183394846370675\surefirebooter-20260903185857134_7.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\16080\AppData\Local\Temp\surefire10704592381907556435\surefirebooter-20260903221342443_7.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.11+10-LTS"/>
@@ -51,7 +51,7 @@
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
     <property name="sun.os.patch.level" value=""/>
     <property name="native.encoding" value="GBK"/>
-    <property name="java.library.path" value="C:\Users\16080\.jdks\ms-21.0.11\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;d:\Trae\TRAE SOLO CN\resources\app\modules\ai-agent\bin;\\?\C:\Users\16080\.trae-cn\plugins\trae-remote-official\lark\1.0.4\bin;d:\Trae\TRAE SOLO CN\resources\app\modules\ai-agent\bin;\\?\C:\Users\16080\.trae-cn\plugins\trae-remote-official\lark\1.0.4\bin;D:\网安\虚拟机\bin\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA app\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Users\16080\.jdks\ms-21.0.11\bin;;D:\github\Git\cmd;D:\node\;C:\Program Files\Memurai\;D:\Rust\.cargo\bin;C:\Users\16080\.cargo\bin;C:\Users\16080\.jdks\ms-21.0.11\bin;C:\Users\16080\AppData\Local\Programs\Python\Launcher\;C:\Users\16080\AppData\Local\Microsoft\WindowsApps;D:\软件\Microsoft VS Code\bin;D:\php\phpStrom\PhpStorm 2024.3.5\bin;;D:\新建文件夹\DataGrip 2025.3.5\bin;D:\maven\apache-maven-3.9.13\bin;D:\pycharm\PyCharm 2026.1\bin;D:\cursor\cursor\resources\app\bin;C:\Users\16080\AppData\Roaming\npm;D:\网安\nmap;d:\Trae\TRAE SOLO CN\resources\app\bin\lib;d:\Trae\TRAE SOLO CN\resources\app\node_modules\@vscode\ripgrep\bin;."/>
+    <property name="java.library.path" value="C:\Users\16080\.jdks\ms-21.0.11\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;d:\Trae\TRAE SOLO CN\resources\app\modules\ai-agent\bin;\\?\C:\Users\16080\.trae-cn\plugins\trae-remote-official\lark\1.0.4\bin;D:\锟斤拷锟斤拷\锟斤拷锟斤拷锟絓bin\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA app\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\dotnet\;C:\Users\16080\.jdks\ms-21.0.11\bin;D:\github\Git\cmd;D:\node\;C:\Program Files\Memurai\;D:\Rust\.cargo\bin;C:\Users\16080\.cargo\bin;C:\Users\16080\AppData\Local\Programs\Python\Launcher\;C:\Users\16080\AppData\Local\Microsoft\WindowsApps;D:\锟斤拷锟斤拷\Microsoft VS Code\bin;D:\php\phpStrom\PhpStorm 2024.3.5\bin;D:\锟铰斤拷锟侥硷拷锟斤拷\DataGrip 2025.3.5\bin;D:\maven\apache-maven-3.9.13\bin;D:\pycharm\PyCharm 2026.1\bin;D:\cursor\cursor\resources\app\bin;C:\Users\16080\AppData\Roaming\npm;D:\锟斤拷锟斤拷\nmap;d:\Trae\TRAE SOLO CN\resources\app\bin\lib;d:\Trae\TRAE SOLO CN\resources\app\node_modules\@vscode\ripgrep\bin;."/>
     <property name="java.vm.info" value="mixed mode, sharing"/>
     <property name="stderr.encoding" value="GBK"/>
     <property name="java.vendor" value="Microsoft"/>
@@ -59,13 +59,13 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="deterministicId_differs_for_different_namespaces" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.052">
+  <testcase name="deterministicId_differs_for_different_namespaces" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.062">
     <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation
 SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
 ]]></system-err>
   </testcase>
-  <testcase name="deterministicId_is_stable" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.001"/>
-  <testcase name="deterministicId_is_positive" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.004"/>
+  <testcase name="deterministicId_is_stable" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.002"/>
+  <testcase name="deterministicId_is_positive" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.005"/>
   <testcase name="deterministicId_differs_for_different_keys" classname="com.langmem4j.store.qdrant.QdrantMemoryStoreTest" time="0.0"/>
 </testsuite>

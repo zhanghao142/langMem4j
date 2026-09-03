@@ -21,6 +21,7 @@
         <module>langmem4j-core</module>
         <module>langmem4j-store-qdrant</module>
         <module>langmem4j-langgraph4j</module>
+        <module>langmem4j-strategy</module>
         <module>langmem4j-tools-core</module>
         <module>langmem4j-tools</module>
         <module>langmem4j-examples</module>
@@ -114,6 +115,11 @@
             <dependency>
                 <groupId>com.langmem4j</groupId>
                 <artifactId>langmem4j-langgraph4j</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.langmem4j</groupId>
+                <artifactId>langmem4j-strategy</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

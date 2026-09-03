@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-strategy</artifactId>
+
+    <name>langmem4j-strategy</name>
+    <description>
+        LLM-driven strategy implementations for langMem4j SPIs.
+        Currently provides LlmSummarizationCompaction — a MemoryCompactionPolicy that
+        uses a LangChain4j ChatLanguageModel to summarize grouped memory fragments
+        into concise, high-density records. Depends on langmem4j-core (SPI) + langchain4j-core.
+    </description>
+
+    <dependencies>
+        <!-- langMem4j SPI (MemoryCompactionPolicy, Memory). -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-core</artifactId>
+        </dependency>
+
+        <!-- LangChain4j ChatLanguageModel interface. -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-core</artifactId>
+        </dependency>
+
+        <!-- Test stack (versions managed by parent POM). -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -6,6 +6,7 @@ com\langmem4j\core\store\package-info.class
 com\langmem4j\core\store\MemoryFilter$Builder.class
 com\langmem4j\core\memory\package-info.class
 com\langmem4j\core\store\inmemory\InMemoryMemoryStore.class
+com\langmem4j\core\memory\MemoryCompactionPolicy.class
 com\langmem4j\core\store\MemoryStore.class
 com\langmem4j\core\manager\MemoryManager.class
 com\langmem4j\core\manager\package-info.class
