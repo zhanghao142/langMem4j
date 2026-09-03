@@ -1,6 +1,7 @@
 com\langmem4j\core\manager\MemoryManager$Builder.class
 com\langmem4j\core\store\inmemory\InMemoryMemoryStore$1ScoredMemory.class
 com\langmem4j\core\embedding\EmbeddingGenerator.class
+com\langmem4j\core\memory\MemoryDecayPolicy.class
 com\langmem4j\core\store\package-info.class
 com\langmem4j\core\store\MemoryFilter$Builder.class
 com\langmem4j\core\memory\package-info.class
@@ -8,6 +9,7 @@ com\langmem4j\core\store\inmemory\InMemoryMemoryStore.class
 com\langmem4j\core\store\MemoryStore.class
 com\langmem4j\core\manager\MemoryManager.class
 com\langmem4j\core\manager\package-info.class
+com\langmem4j\core\memory\MemoryMergePolicy.class
 com\langmem4j\core\memory\Memory.class
 com\langmem4j\core\store\MemoryFilter.class
 com\langmem4j\core\store\inmemory\package-info.class

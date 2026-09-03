@@ -53,7 +53,7 @@ public class SaveMemoryService {
     /** Same contract as SaveMemoryTool#saveMemoryWithMetadata. */
     public String saveMemoryWithMetadata(String key, String content, String metadata) {
         Map<String, Object> meta = parseMetadata(metadata);
-        Memory memory = new Memory(namespace, key, content, meta, null);
+        Memory memory = Memory.of(namespace, key, content, meta);
         store.upsert(namespace, memory);
         log.info("saved ns={} key={} metadata={}", namespace, key, meta);
         return "Memory saved: key='" + key + "' → " + content

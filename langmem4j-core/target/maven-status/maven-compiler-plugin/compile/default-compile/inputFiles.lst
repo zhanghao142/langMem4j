@@ -2,6 +2,8 @@ D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\embedding\Embedding
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\manager\MemoryManager.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\manager\package-info.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\Memory.java
+D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\MemoryDecayPolicy.java
+D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\MemoryMergePolicy.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\package-info.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\store\inmemory\InMemoryMemoryStore.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\store\inmemory\package-info.java

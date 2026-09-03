@@ -63,11 +63,11 @@ class CosineSearchTest {
         InMemoryMemoryStore store = new InMemoryMemoryStore(toyGenerator());
 
         store.upsert("ns", new Memory("ns", "m_cat", "my cat is fluffy",
-                null, new float[]{1f, 0f}));
+                null, new float[]{1f, 0f}, 0, 0));
         store.upsert("ns", new Memory("ns", "m_dog", "my dog barks loud",
-                null, new float[]{0f, 1f}));
+                null, new float[]{0f, 1f}, 0, 0));
         store.upsert("ns", new Memory("ns", "m_neutral", "the weather is nice",
-                null, new float[]{0.5f, 0.5f}));
+                null, new float[]{0.5f, 0.5f}, 0, 0));
 
         List<Memory> results = store.search("ns", "cat", 3);
 
@@ -84,7 +84,7 @@ class CosineSearchTest {
 
         // stored with embedding
         store.upsert("ns", new Memory("ns", "with_emb", "cat",
-                null, new float[]{1f, 0f}));
+                null, new float[]{1f, 0f}, 0, 0));
         // stored WITHOUT embedding — should be skipped
         store.upsert("ns", Memory.of("ns", "no_emb", "cat"));
 

@@ -2,6 +2,8 @@ package com.langmem4j.core.manager;
 
 import com.langmem4j.core.embedding.EmbeddingGenerator;
 import com.langmem4j.core.memory.Memory;
+import com.langmem4j.core.memory.MemoryDecayPolicy;
+import com.langmem4j.core.memory.MemoryMergePolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MemoryManagerTest {
+
+    private static final long DAY = 24L * 60 * 60 * 1000;
 
     // ----- factories -----
 
@@ -139,7 +143,7 @@ class MemoryManagerTest {
                 .build();
 
         float[] custom = {0.3f, 0.7f};
-        manager.add(new Memory("ns", "k", "my cat is fluffy", null, custom));
+        manager.add(new Memory("ns", "k", "my cat is fluffy", null, custom, 0, 0));
 
         Memory stored = manager.get("k").orElseThrow();
         assertThat(stored.embeddingVector()).isEqualTo(custom); // NOT overwritten
@@ -162,6 +166,24 @@ class MemoryManagerTest {
         assertThat(manager.keys("ns")).containsExactlyInAnyOrder("a", "b");
         assertThat(manager.get("ns", "a").orElseThrow().embeddingVector()).isNotNull();
         assertThat(manager.get("ns", "b").orElseThrow().embeddingVector()).isNotNull();
+    }
+
+    @Test
+    void addAll_applies_merge_policy_per_record() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withMergePolicy(MemoryMergePolicy.keyMerge())
+                .build();
+
+        // Pre-populate with short value
+        manager.add(new Memory("ns", "k", "short", null, null, 0, 0));
+
+        // Batch add with longer value — should merge, not overwrite
+        manager.addAll("ns", List.of(
+                Memory.of("ns", "k", "this is a longer value")
+        ));
+
+        Memory stored = manager.get("ns", "k").orElseThrow();
+        assertThat(stored.value()).isEqualTo("this is a longer value"); // merge kept longer
     }
 
     // ----- remove / clear -----
@@ -208,10 +230,6 @@ class MemoryManagerTest {
                 .withDefaultNamespace("ns")
                 .withEmbeddingGenerator(toyGenerator())
                 .build();
-        // The InMemoryMemoryStore cosine path needs MEMORIES with pre-computed vectors.
-        // When we add() through MemoryManager, embeddings are generated automatically,
-        // but InMemoryMemoryStore's search also needs a generator injected —
-        // so for this assertion we just verify search returns something without blowing up.
         manager.add("cat", "my cat is fluffy");
 
         List<Memory> results = manager.search("cat", 5);
@@ -229,5 +247,167 @@ class MemoryManagerTest {
         assertThat(manager.search("needle")).hasSize(5);
         // 2-arg: explicit limit
         assertThat(manager.search("needle", 2)).hasSize(2);
+    }
+
+    // ================================================================
+    // Decay policy tests
+    // ================================================================
+
+    @Test
+    void search_with_decay_filters_out_ancient_memories() {
+        long now = System.currentTimeMillis();
+        long fiftyDaysAgo = now - 50 * DAY;
+        long oneDayAgo = now - DAY;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withDecayPolicy(MemoryDecayPolicy.exponential()) // 7-day half-life
+                .build();
+
+        // Ancient: decayFactor ≈ 0.5^(50/7) ≈ 0.007 < 0.01 → pruned
+        manager.add(new Memory("ns", "ancient", "needle", null, null,
+                fiftyDaysAgo, fiftyDaysAgo));
+        // Recent: decayFactor ≈ 0.5^(1/7) ≈ 0.9 → survives
+        manager.add(new Memory("ns", "recent", "needle", null, null,
+                oneDayAgo, oneDayAgo));
+
+        List<Memory> results = manager.search("needle", 10);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).key()).isEqualTo("recent");
+    }
+
+    @Test
+    void search_with_decay_re_ranks_by_freshness() {
+        long now = System.currentTimeMillis();
+        long eightDaysAgo = now - 8 * DAY;
+        long oneDayAgo = now - DAY;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withDecayPolicy(MemoryDecayPolicy.exponential())
+                .build();
+
+        // Old: decayFactor ≈ 0.5^(8/7) ≈ 0.45
+        manager.add(new Memory("ns", "old", "needle in haystack", null, null,
+                eightDaysAgo, eightDaysAgo));
+        // New: decayFactor ≈ 0.5^(1/7) ≈ 0.9
+        manager.add(new Memory("ns", "new", "needle found here", null, null,
+                oneDayAgo, oneDayAgo));
+
+        List<Memory> results = manager.search("needle", 10);
+
+        assertThat(results).hasSize(2);
+        // Higher decay factor (more recent) should come first
+        assertThat(results.get(0).key()).isEqualTo("new");
+        assertThat(results.get(1).key()).isEqualTo("old");
+    }
+
+    @Test
+    void search_without_decay_preserves_store_order() {
+        long now = System.currentTimeMillis();
+        long eightDaysAgo = now - 8 * DAY;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .build(); // no decay policy
+
+        manager.add(new Memory("ns", "first", "needle", null, null,
+                eightDaysAgo, eightDaysAgo));
+        manager.add(new Memory("ns", "second", "needle", null, null,
+                now, now));
+
+        // Without decay, both returned in store's natural order
+        List<Memory> results = manager.search("needle", 10);
+        assertThat(results).hasSize(2);
+    }
+
+    @Test
+    void get_refreshes_lastAccessedAt_when_decay_is_active() {
+        long now = System.currentTimeMillis();
+        long oldAccess = now - 10 * 60 * 1000; // 10 minutes ago
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withDecayPolicy(MemoryDecayPolicy.exponential())
+                .build();
+
+        // Store a memory with old lastAccessedAt
+        manager.add(new Memory("ns", "k", "v", null, null, oldAccess, oldAccess));
+
+        long before = System.currentTimeMillis();
+        Optional<Memory> result = manager.get("k");
+        long after = System.currentTimeMillis();
+
+        assertThat(result).isPresent();
+        assertThat(result.get().lastAccessedAt())
+                .isBetween(before, after + 1000)
+                .isGreaterThan(oldAccess);
+    }
+
+    @Test
+    void get_does_not_refresh_when_decay_is_NONE() {
+        long now = System.currentTimeMillis();
+        long oldAccess = now - 10 * 60 * 1000;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .build(); // no decay policy
+
+        manager.add(new Memory("ns", "k", "v", null, null, oldAccess, oldAccess));
+
+        Optional<Memory> result = manager.get("k");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().lastAccessedAt()).isEqualTo(oldAccess);
+    }
+
+    // ================================================================
+    // Merge policy tests
+    // ================================================================
+
+    @Test
+    void add_with_merge_keeps_longer_value_and_unions_metadata() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .withMergePolicy(MemoryMergePolicy.keyMerge())
+                .build();
+
+        manager.add("k", "short value");
+        manager.add("k", "this is a longer value", Map.of("source", "diary"));
+
+        Memory stored = manager.get("k").orElseThrow();
+        assertThat(stored.value()).isEqualTo("this is a longer value");
+        assertThat(stored.metadata()).containsEntry("source", "diary");
+    }
+
+    @Test
+    void add_without_merge_overwrites_silently() {
+        MemoryManager manager = MemoryManager.inMemory()
+                .withDefaultNamespace("ns")
+                .build(); // merge = NONE (default)
+
+        manager.add("k", "first value", Map.of("a", 1));
+        manager.add("k", "second value", Map.of("b", 2));
+
+        Memory stored = manager.get("k").orElseThrow();
+        assertThat(stored.value()).isEqualTo("second value");
+        assertThat(stored.metadata()).doesNotContainKey("a"); // overwritten, not merged
+    }
+
+    @Test
+    void add_merge_preserves_earliest_createdAt() {
+        long early = 1_000_000L;
+        long late = 2_000_000L;
+
+        MemoryManager manager = MemoryManager.inMemory()
+                .withMergePolicy(MemoryMergePolicy.keyMerge())
+                .build();
+
+        manager.add(new Memory("ns", "k", "v1", null, null, early, early));
+        manager.add(new Memory("ns", "k", "v2", null, null, late, late));
+
+        Memory stored = manager.get("ns", "k").orElseThrow();
+        assertThat(stored.createdAt()).isEqualTo(early);
     }
 }

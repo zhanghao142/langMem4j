@@ -6,12 +6,13 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="langmem4j-store-qdrant" />
-        <module name="langmem4j-tools" />
-        <module name="langmem4j-core" />
         <module name="langmem4j-example-plain" />
         <module name="langmem4j-tools-core" />
         <module name="langmem4j-example-springboot" />
+        <module name="langmem4j-store-qdrant" />
+        <module name="langmem4j-tools" />
+        <module name="langmem4j-core" />
+        <module name="langmem4j-langgraph4j" />
       </profile>
     </annotationProcessing>
   </component>

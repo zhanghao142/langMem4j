@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.langmem4j.tools.SaveMemoryToolTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.120 s -- in com.langmem4j.tools.SaveMemoryToolTest
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.102 s -- in com.langmem4j.tools.SaveMemoryToolTest

@@ -1,0 +1,5 @@
+# Created at 2026-09-03T18:58:57.902
+Boot Manifest-JAR contains absolute paths in classpath 'D:\langMem4j\langmem4j-langgraph4j\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

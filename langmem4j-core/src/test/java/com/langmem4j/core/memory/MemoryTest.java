@@ -51,7 +51,7 @@ class MemoryTest {
     @Test
     void embedding_vector_is_defensively_copied() {
         float[] vector = {1f, 2f, 3f};
-        Memory memory = new Memory("ns", "k", "v", null, vector);
+        Memory memory = new Memory("ns", "k", "v", null, vector, 0, 0);
         vector[0] = 999f; // mutate the source
 
         assertThat(memory.embeddingVector()).containsExactly(1f, 2f, 3f);
@@ -59,9 +59,9 @@ class MemoryTest {
 
     @Test
     void equals_and_hashCode_handle_vector_by_content() {
-        Memory m1 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.2f});
-        Memory m2 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.2f});
-        Memory m3 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.9f});
+        Memory m1 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.2f}, 0, 0);
+        Memory m2 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.2f}, 0, 0);
+        Memory m3 = new Memory("ns", "k", "v", null, new float[]{0.1f, 0.9f}, 0, 0);
 
         assertThat(m1).isEqualTo(m2);
         assertThat(m1).isNotEqualTo(m3);
@@ -105,7 +105,7 @@ class MemoryTest {
     @Test
     void factory_methods_produce_equivalent_memories() {
         Memory viaFactory = Memory.of("ns", "k", "v");
-        Memory direct = new Memory("ns", "k", "v", null, null);
+        Memory direct = new Memory("ns", "k", "v", null, null, 0, 0);
 
         assertThat(viaFactory).isEqualTo(direct);
         assertThat(direct.metadata()).isEmpty();

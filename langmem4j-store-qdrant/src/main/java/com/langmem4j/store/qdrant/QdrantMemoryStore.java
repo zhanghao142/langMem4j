@@ -397,7 +397,7 @@ public class QdrantMemoryStore implements MemoryStore {
             }
         }
 
-        return new Memory(namespace, key, value, metadata, vector);
+        return Memory.of(namespace, key, value, metadata, vector);
     }
 
     /** Best-effort conversion from Qdrant Value to a plain Java object. */

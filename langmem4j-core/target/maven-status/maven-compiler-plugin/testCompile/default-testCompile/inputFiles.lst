@@ -1,4 +1,6 @@
 D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\manager\MemoryManagerTest.java
+D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\memory\MemoryDecayPolicyTest.java
+D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\memory\MemoryMergePolicyTest.java
 D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\memory\MemoryTest.java
 D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\store\inmemory\CosineSearchTest.java
 D:\langMem4j\langmem4j-core\src\test\java\com\langmem4j\core\store\inmemory\InMemoryMemoryStoreFilterTest.java

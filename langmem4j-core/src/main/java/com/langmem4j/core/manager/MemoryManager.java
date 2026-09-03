@@ -2,15 +2,19 @@ package com.langmem4j.core.manager;
 
 import com.langmem4j.core.embedding.EmbeddingGenerator;
 import com.langmem4j.core.memory.Memory;
+import com.langmem4j.core.memory.MemoryDecayPolicy;
+import com.langmem4j.core.memory.MemoryMergePolicy;
 import com.langmem4j.core.store.MemoryFilter;
 import com.langmem4j.core.store.MemoryStore;
 import com.langmem4j.core.store.inmemory.InMemoryMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * High-level facade over {@link MemoryStore} + {@link EmbeddingGenerator} —
@@ -44,11 +48,15 @@ public class MemoryManager {
     private final MemoryStore store;
     private final EmbeddingGenerator embeddingGenerator;
     private final String defaultNamespace;
+    private final MemoryDecayPolicy decayPolicy;
+    private final MemoryMergePolicy mergePolicy;
 
     private MemoryManager(Builder builder) {
         this.store = builder.store;
         this.embeddingGenerator = builder.embeddingGenerator;
         this.defaultNamespace = builder.defaultNamespace;
+        this.decayPolicy = builder.decayPolicy;
+        this.mergePolicy = builder.mergePolicy;
     }
 
     // ================================================================
@@ -79,6 +87,8 @@ public class MemoryManager {
         private MemoryStore store;
         private EmbeddingGenerator embeddingGenerator;
         private String defaultNamespace;
+        private MemoryDecayPolicy decayPolicy = MemoryDecayPolicy.NONE;
+        private MemoryMergePolicy mergePolicy = MemoryMergePolicy.NONE;
 
         Builder store(MemoryStore store) { this.store = store; return this; }
 
@@ -101,6 +111,28 @@ public class MemoryManager {
          */
         public Builder withDefaultNamespace(String namespace) {
             this.defaultNamespace = namespace;
+            return this;
+        }
+
+        /**
+         * Sets the decay policy used to filter and re-rank stale memories
+         * during {@code search()}. Also enables {@code lastAccessedAt}
+         * refresh on {@code get()}. Default is
+         * {@link MemoryDecayPolicy#NONE} (no decay).
+         */
+        public Builder withDecayPolicy(MemoryDecayPolicy policy) {
+            this.decayPolicy = policy == null ? MemoryDecayPolicy.NONE : policy;
+            return this;
+        }
+
+        /**
+         * Sets the merge policy invoked when {@code add()} or
+         * {@code addAll()} encounters an existing memory at the same key.
+         * Default is {@link MemoryMergePolicy#NONE}
+         * (classic overwrite upsert).
+         */
+        public Builder withMergePolicy(MemoryMergePolicy policy) {
+            this.mergePolicy = policy == null ? MemoryMergePolicy.NONE : policy;
             return this;
         }
 
@@ -136,6 +168,10 @@ public class MemoryManager {
     /**
      * Stores (or overwrites) a memory under an explicit namespace.
      * <p>
+     * If a merge policy is configured and a memory already exists at this
+     * key, the two are merged via {@link MemoryMergePolicy#merge}.
+     * Otherwise the incoming memory overwrites the existing one.
+     * <p>
      * If the record has no pre-computed embedding and an
      * {@link EmbeddingGenerator} is configured, the vector is generated
      * transparently before writing.
@@ -149,6 +185,7 @@ public class MemoryManager {
             log.debug("auto-embedded ns={} key={} dim={}", namespace, key, vector.length);
         }
 
+        memory = applyMerge(namespace, memory);
         store.upsert(namespace, memory);
     }
 
@@ -162,10 +199,18 @@ public class MemoryManager {
         if (toUpsert.embeddingVector() == null && embeddingGenerator != null) {
             toUpsert = toUpsert.withEmbedding(embeddingGenerator.embed(memory.value()));
         }
+        toUpsert = applyMerge(memory.namespace(), toUpsert);
         store.upsert(memory.namespace(), toUpsert);
     }
 
-    /** Batch variant of {@link #add(String, String, String, Map)}. */
+    /**
+     * Batch variant of {@link #add(String, String, String, Map)}.
+     * <p>
+     * Each memory goes through the same embedding enrichment and merge
+     * policy as {@link #add(Memory)}. Merge is applied per-record (each
+     * memory is checked against the store individually) to ensure
+     * semantic consistency with {@code add()}.
+     */
     public void addAll(String namespace, List<Memory> memories) {
         List<Memory> enriched = memories.stream()
                 .map(m -> {
@@ -174,7 +219,8 @@ public class MemoryManager {
                     }
                     return m;
                 })
-                .toList();
+                .map(m -> applyMerge(namespace, m))
+                .collect(Collectors.toList());
         store.upsertBatch(namespace, enriched);
     }
 
@@ -202,14 +248,26 @@ public class MemoryManager {
     // Read API — get / list / search
     // ================================================================
 
-    /** Looks up a single memory by key in the default namespace. */
+    /**
+     * Looks up a single memory by key in the default namespace.
+     * <p>
+     * If a decay policy is active, the returned memory's
+     * {@code lastAccessedAt} is refreshed to now and written back to the
+     * store, pushing back the decay clock.
+     */
     public Optional<Memory> get(String key) {
-        return store.getByKey(defaultNs(), key);
+        return refreshAccessedAt(store.getByKey(defaultNs(), key));
     }
 
-    /** Looks up a single memory by key in the given namespace. */
+    /**
+     * Looks up a single memory by key in the given namespace.
+     * <p>
+     * If a decay policy is active, the returned memory's
+     * {@code lastAccessedAt} is refreshed to now and written back to the
+     * store.
+     */
     public Optional<Memory> get(String namespace, String key) {
-        return store.getByKey(namespace, key);
+        return refreshAccessedAt(store.getByKey(namespace, key));
     }
 
     /** Lists all memory keys in the default namespace. */
@@ -244,9 +302,13 @@ public class MemoryManager {
      * construction time. If no generator is configured, the store's
      * default fallback strategy is used (e.g. substring match in
      * InMemoryMemoryStore).
+     * <p>
+     * If a decay policy is active, results are filtered (memories below
+     * {@link MemoryDecayPolicy#pruneThreshold()} are dropped) and
+     * re-ranked by decay factor (higher = more recent = first).
      */
     public List<Memory> search(String namespace, String query, int limit) {
-        return store.search(namespace, query, limit);
+        return applyDecay(store.search(namespace, query, limit));
     }
 
     /**
@@ -263,8 +325,8 @@ public class MemoryManager {
      * }</pre>
      */
     public List<Memory> search(String namespace, String query, int limit, MemoryFilter filter) {
-        return store.search(namespace, query, limit,
-                filter == null ? MemoryFilter.NONE : filter);
+        return applyDecay(store.search(namespace, query, limit,
+                filter == null ? MemoryFilter.NONE : filter));
     }
 
     /** Default-namespace + explicit-limit variant of the filtered search. */
@@ -290,6 +352,83 @@ public class MemoryManager {
     /** Returns the default namespace (may be null if never set). */
     public Optional<String> defaultNamespace() {
         return Optional.ofNullable(defaultNamespace);
+    }
+
+    /** Returns the configured decay policy (never null). */
+    public MemoryDecayPolicy decayPolicy() {
+        return decayPolicy;
+    }
+
+    /** Returns the configured merge policy (never null). */
+    public MemoryMergePolicy mergePolicy() {
+        return mergePolicy;
+    }
+
+    // ================================================================
+    // Internal — merge, decay, refresh
+    // ================================================================
+
+    /**
+     * If a merge policy is configured, checks for an existing memory at the
+     * same key and merges it with the incoming one.
+     */
+    private Memory applyMerge(String namespace, Memory incoming) {
+        if (mergePolicy == MemoryMergePolicy.NONE) return incoming;
+        Optional<Memory> existing = store.getByKey(namespace, incoming.key());
+        if (existing.isPresent()) {
+            Memory merged = mergePolicy.merge(existing.get(), incoming);
+            log.debug("merged ns={} key={} existing.len={} incoming.len={} → merged.len={}",
+                    namespace, incoming.key(),
+                    existing.get().value().length(), incoming.value().length(),
+                    merged.value().length());
+            return merged;
+        }
+        return incoming;
+    }
+
+    /**
+     * If a decay policy is configured:
+     * <ol>
+     *   <li><b>Filter</b> — drop memories whose decay factor has fallen below
+     *       {@link MemoryDecayPolicy#pruneThreshold()}.</li>
+     *   <li><b>Re-rank</b> — sort surviving memories by decay factor descending
+     *       (more recent first). The sort is stable, so ties preserve the
+     *       store's original cosine-similarity order.</li>
+     * </ol>
+     * Note: search results are NOT written back (no lastAccessedAt refresh)
+     * to avoid write amplification. Use {@link #get} for explicit refresh.
+     */
+    private List<Memory> applyDecay(List<Memory> results) {
+        if (decayPolicy == MemoryDecayPolicy.NONE || results.isEmpty()) {
+            return results;
+        }
+        long now = System.currentTimeMillis();
+        float threshold = decayPolicy.pruneThreshold();
+        return results.stream()
+                .filter(m -> decayPolicy.decayFactor(
+                        m.createdAt(), m.lastAccessedAt(), now) >= threshold)
+                .sorted(Comparator.comparingDouble(
+                        (Memory m) -> decayPolicy.decayFactor(
+                                m.createdAt(), m.lastAccessedAt(), now)
+                ).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Refreshes {@code lastAccessedAt} on the returned memory and writes it
+     * back to the store. Only active when a decay policy is configured.
+     * This is the mechanism that "refreshes the decay clock" — without it,
+     * memories would decay based on creation time alone.
+     */
+    private Optional<Memory> refreshAccessedAt(Optional<Memory> found) {
+        if (found.isEmpty() || decayPolicy == MemoryDecayPolicy.NONE) {
+            return found;
+        }
+        Memory m = found.get();
+        Memory refreshed = m.withLastAccessedAt(System.currentTimeMillis());
+        store.upsert(refreshed.namespace(), refreshed);
+        log.debug("refreshed lastAccessedAt ns={} key={}", m.namespace(), m.key());
+        return Optional.of(refreshed);
     }
 
     private String defaultNs() {

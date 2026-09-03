@@ -9,6 +9,8 @@
     <file url="file://$PROJECT_DIR$/langmem4j-examples/langmem4j-example-springboot/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-examples/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-examples/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-langgraph4j/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-langgraph4j/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-store-qdrant/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-store-qdrant/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-tools-core/src/main/java" charset="UTF-8" />

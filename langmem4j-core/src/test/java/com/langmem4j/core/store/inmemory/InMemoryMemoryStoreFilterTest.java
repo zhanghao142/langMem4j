@@ -57,9 +57,9 @@ class InMemoryMemoryStoreFilterTest {
         InMemoryMemoryStore store = new InMemoryMemoryStore(
                 InMemoryMemoryStoreFilterTest::toy);
         Memory a = new Memory("ns", "cat-food",  "the cat eats tuna",
-                Map.of("topic", "pet"), new float[]{1f, 0f, 0f});
+                Map.of("topic", "pet"), new float[]{1f, 0f, 0f}, 0, 0);
         Memory b = new Memory("ns", "car-show",  "the cat C7 won a prize",
-                Map.of("topic", "car"), new float[]{0f, 0f, 1f});
+                Map.of("topic", "car"), new float[]{0f, 0f, 1f}, 0, 0);
         store.upsert("ns", a);
         store.upsert("ns", b);
 
@@ -80,9 +80,9 @@ class InMemoryMemoryStoreFilterTest {
         InMemoryMemoryStore store = new InMemoryMemoryStore(
                 InMemoryMemoryStoreFilterTest::toy);
         store.upsert("ns", new Memory("ns", "a", "my cat is here",
-                Map.of(), new float[]{1f, 0f, 0f}));
+                Map.of(), new float[]{1f, 0f, 0f}, 0, 0));
         store.upsert("ns", new Memory("ns", "b", "my dog is here",
-                Map.of(), new float[]{0f, 1f, 0f}));
+                Map.of(), new float[]{0f, 1f, 0f}, 0, 0));
 
         // query = "cat" produces [1,0,0]. cos with dog = 0.0.
         // with minScore 0.5 → only cat
