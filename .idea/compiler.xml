@@ -9,6 +9,7 @@
         <module name="langmem4j-example-plain" />
         <module name="langmem4j-tools-core" />
         <module name="langmem4j-example-springboot" />
+        <module name="langmem4j-strategy" />
         <module name="langmem4j-store-qdrant" />
         <module name="langmem4j-tools" />
         <module name="langmem4j-core" />

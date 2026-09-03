@@ -23,15 +23,17 @@ Use standalone, or expose as tool functions to **LangChain4j** / **Spring AI**.
 ┌─────────────────────────────────────────────────────────────────────┐
 │  MemoryManager  (single facade — Builder pattern)                   │
 │  ┌────────────────────────────────────────────────────────────────┐ │
-│  │ withStore(store)          ← pick backend                       │ │
-│  │ withEmbeddingGenerator()  ← pick embedding model               │ │
-│  │ withDecayPolicy()         ← memory decay (exponential/custom)  │ │
-│  │ withMergePolicy()         ← memory merge (keyMerge/custom)     │ │
-│  │ withDefaultNamespace()    ← tenant isolation                   │ │
+│  │ withStore(store)           ← pick backend                      │ │
+│  │ withEmbeddingGenerator()   ← pick embedding model              │ │
+│  │ withDecayPolicy()          ← memory decay (exponential/custom) │ │
+│  │ withMergePolicy()          ← memory merge (keyMerge/custom)    │ │
+│  │ withCompactionPolicy()     ← fragment→summary compaction       │ │
+│  │ withDefaultNamespace()     ← tenant isolation                  │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 │  add → enrich(missing embedding auto-filled) → applyMerge → upsert  │
 │  search → store.search → applyDecay(filter + re-rank by freshness)  │
 │  get → getByKey → refresh lastAccessedAt ("access extends lifespan")│
+│  compact → listKeys → policy.compact → delete old → upsert summary  │
 └────┬────────────┬──────────────┬───────────────────┬────────────────┘
      ▼            ▼              ▼                   ▼
 ┌──────────┐ ┌───────────┐ ┌────────────────┐ ┌───────────────────────┐
@@ -51,13 +53,13 @@ Use standalone, or expose as tool functions to **LangChain4j** / **Spring AI**.
           └──────────────┘ └────────────┘ └──────────────────┘
 ```
 
-**4 SPIs, 1 facade, 3 storage backends — all pluggable, switch by changing one Builder line.**
+**5 SPIs, 1 facade, 3 storage backends — all pluggable, switch by changing one Builder line.**
 
 ***
 
 ## ✨ Features
 
-- **One entry point, 4 SPIs** — `MemoryManager` is the only class you need; swap backends via `MemoryStore`, embedding models via `EmbeddingGenerator`, decay via `MemoryDecayPolicy`, merge via `MemoryMergePolicy`
+- **One entry point, 5 SPIs** — `MemoryManager` is the only class you need; swap backends via `MemoryStore`, embedding models via `EmbeddingGenerator`, decay via `MemoryDecayPolicy`, merge via `MemoryMergePolicy`, compaction via `MemoryCompactionPolicy`
 
 - **Namespace-native isolation** — `user_alice / user_bob / agent_prod` under the same store never interfere; no key-prefix hacks
 
@@ -74,6 +76,12 @@ Use standalone, or expose as tool functions to **LangChain4j** / **Spring AI**.
   - `MemoryMergePolicy.keyMerge()`: same-key rewrites keep the longer value, union metadata, preserve earliest `createdAt`, refresh `lastAccessedAt`, prefer incoming embedding
 
   - Both are `@FunctionalInterface` with `NONE` defaults — zero upgrade friction
+
+- **Context-window compaction (V1)** — `MemoryCompactionPolicy` + `manager.compact(ns)`: 100 rounds of conversation → 100 fragments won't fit in your LLM context; group by `metadata.category` and replace each group with a single summarized record
+  - Built-in `MemoryCompactionPolicy.categoryGroup()`: pure-Java concatenation (no LLM, deterministic)
+  - `langmem4j-strategy` module ships `LlmSummarizationCompaction`: LangChain4j `ChatModel`-driven summarization, or plug any `Function<String,String>` summarizer (Spring AI, custom HTTP)
+  - Compacted records carry `compacted=true`, preserve earliest `createdAt`, refresh `lastAccessedAt`
+  - **Requires a backend with `listKeys()` support** (InMemory / Qdrant OK; the langgraph4j adapter does not implement it)
 
 - **Zero-dependency runtime** — core / tools-core modules only need `slf4j-api`; Qdrant adapter pulls in the official gRPC client; langgraph4j adapter only needs `langgraph4j-core`
 
@@ -93,11 +101,12 @@ langmem4j/
 │   ├── memory/Memory.java                 // immutable record (7 fields: ns/key/value/metadata/embedding/createdAt/lastAccessedAt)
 │   ├── memory/MemoryDecayPolicy.java      // SPI: decayFactor(createdAt,lastAccessedAt,now) + NONE + exponential(halfLife) + pruneThreshold()
 │   ├── memory/MemoryMergePolicy.java      // SPI: merge(existing,incoming) + NONE + keyMerge()
+│   ├── memory/MemoryCompactionPolicy.java // SPI: compact(ns,candidates) + NONE + categoryGroup()
 │   ├── embedding/EmbeddingGenerator.java  // embedding SPI
 │   ├── store/MemoryStore.java             // storage SPI (search includes MemoryFilter)
 │   ├── store/MemoryFilter.java            // metadata(AND) + minScore filter
 │   ├── store/inmemory/InMemoryMemoryStore.java
-│   └── manager/MemoryManager.java         // ✅ the facade you call every day (withDecayPolicy() / withMergePolicy())
+│   └── manager/MemoryManager.java         // ✅ the facade you call every day (withDecayPolicy() / withMergePolicy() / withCompactionPolicy() + compact())
 │
 ├── langmem4j-store-qdrant       ← optional: Qdrant vector DB adapter
 │   └── (collection = namespace, payload flattening, filter V1 probe 10× + client-side)
@@ -105,6 +114,9 @@ langmem4j/
 ├── langmem4j-langgraph4j        ← optional: langgraph4j Store SPI adapter
 │   ├── LangGraph4jStoreAdapter          // Store → MemoryStore bidirectional mapping (upsert/get/delete/search)
 │   └── StoreDecayMergeDemo              // E2E: decay re-ranking + keyMerge + UOE boundaries (runnable main)
+│
+├── langmem4j-strategy           ← optional: LLM-driven strategy implementations (needs langchain4j-core)
+│   └── LlmSummarizationCompaction       // MemoryCompactionPolicy backed by ChatModel or any Function<String,String>
 │
 ├── langmem4j-tools-core         ← optional: framework-free LLM service layer
 │   ├── SaveMemoryService        // save / saveWithMetadata / delete
@@ -162,6 +174,13 @@ langmem4j/
 <dependency>
     <groupId>com.langmem4j</groupId>
     <artifactId>langmem4j-langgraph4j</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+
+<!-- Optional: LLM-driven compaction (LlmSummarizationCompaction) -->
+<dependency>
+    <groupId>com.langmem4j</groupId>
+    <artifactId>langmem4j-strategy</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
@@ -299,9 +318,9 @@ String hits = search.searchMemory("food", 5, "category=preference");
 
 ***
 
-## 🧠 Decay & Merge Strategies
+## 🧠 Decay, Merge & Compaction Strategies
 
-langMem4j memories aren't an append-only log — two SPIs handle **time-driven freshness** and **same-key merging** so you don't roll your own eviction/dedup logic.
+langMem4j memories aren't an append-only log — three SPIs handle **time-driven freshness**, **same-key merging**, and **fragment→summary compaction** so you don't roll your own eviction/dedup logic.
 
 ### Decay: memories age, but aren't deleted
 
@@ -351,6 +370,43 @@ manager.add("food", "Alice likes spicy hot pot with sesame sauce",
 | `NONE`       | Direct overwrite (default, zero upgrade friction)                                                                                      |
 | Custom       | Implement the `MemoryMergePolicy` functional interface                                                                                 |
 
+### Compaction: 100 fragments → a handful of summaries
+
+10 rounds of conversation → 6 memories is fine. 100 rounds → 100 fragments won't fit in your LLM context window. `compact()` groups by `metadata.category` and replaces each group with one summary record:
+
+```java
+// Option A: pure Java, no LLM — deterministic concatenation ("v1; v2; v3")
+MemoryManager manager = MemoryManager.inMemory()
+        .withDefaultNamespace("user_alice")
+        .withCompactionPolicy(MemoryCompactionPolicy.categoryGroup())
+        .build();
+
+// Option B: LLM-driven — LangChain4j ChatModel summarizes each group
+MemoryManager manager = MemoryManager.withStore(store)
+        .withDefaultNamespace("user_alice")
+        .withCompactionPolicy(new LlmSummarizationCompaction(myChatModel))  // langmem4j-strategy
+        .build();
+
+// ... after 50 rounds of conversation:
+manager.compact("user_alice");   // 50 fragments → ~5 summarized memories
+```
+
+**Compaction rules** (both built-in policies):
+
+- Groups by `metadata.get("category")` (defaults to `"default"` when absent)
+- Single-element groups are returned as-is — no wasted LLM call
+- Compacted key = `category + "_compacted"`; metadata gains `compacted=true`
+- Earliest `createdAt` preserved; `lastAccessedAt` refreshed to now
+- Old fragments are deleted; embeddings re-generated if a generator is configured
+
+| Policy                        | Backend        | Behavior                                                     |
+| ----------------------------- | -------------- | ------------------------------------------------------------ |
+| `categoryGroup()`             | core (pure Java) | Concatenate values with `"; "` — deterministic, no LLM call |
+| `LlmSummarizationCompaction`  | strategy (LangChain4j `ChatModel`) | One concise factual summary per group; also accepts any `Function<String,String>` summarizer |
+| `NONE`                        | —              | No compaction (default, zero upgrade friction)               |
+
+> ⚠️ **`compact()` requires a `MemoryStore` implementation that supports `listKeys()`** — InMemoryMemoryStore and QdrantMemoryStore are fine; `LangGraph4jStoreAdapter` throws `UnsupportedOperationException` (the langgraph4j Store SPI has no list method).
+
 ### Custom Strategy (two lines)
 
 ```java
@@ -393,10 +449,10 @@ MemoryDecayPolicy weekendAware = (createdAt, lastAccessedAt, now) -> {
 | <br />            | langMem4j                                                                                                                                                   | Mem0 / mem4j                                                                            |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | **Language**      | Native Java 17+, bytecode-level interop with Spring / LangChain4j / langgraph4j                                                                             | Python-first; Java side typically via REST + re-serialization                           |
-| **Design**        | 4 SPIs (`MemoryStore` / `EmbeddingGenerator` / `MemoryDecayPolicy` / `MemoryMergePolicy`) + 1 facade; **core + tools-core: zero framework deps at runtime** | Monolithic SDK, tightly coupled to specific Vector DB / LLM provider; decay usually DIY |
+| **Design**        | 5 SPIs (`MemoryStore` / `EmbeddingGenerator` / `MemoryDecayPolicy` / `MemoryMergePolicy` / `MemoryCompactionPolicy`) + 1 facade; **core + tools-core: zero framework deps at runtime** | Monolithic SDK, tightly coupled to specific Vector DB / LLM provider; decay usually DIY |
 | **Entry**         | `MemoryManager.add()` — one line generates embedding + writes; search includes metadata filter / decay re-ranking / key-merge                               | Manually compose `Memory + Embedding + Store` objects; write your own eviction          |
 | **Tool layer**    | LangChain4j module + pure-Java `tools-core`; switch Spring AI / langgraph4j / custom bridge without rewriting                                               | Bundled with the official framework only                                                |
-| **Test-friendly** | `InMemoryMemoryStore` / `langgraph4j InMemoryStore` out-of-box; 130+ unit tests in milliseconds                                                             | Often needs containers or mocking the entire client layer                               |
+| **Test-friendly** | `InMemoryMemoryStore` / `langgraph4j InMemoryStore` out-of-box; 160+ unit tests in milliseconds                                                             | Often needs containers or mocking the entire client layer                               |
 
 Bottom line: **langMem4j is the "just enough" memory layer for Java developers — SPI + facade + time-driven strategies (decay / merge) + multi-backend adapters, without locking you into any LLM or DB.**
 
@@ -427,16 +483,17 @@ mvn -pl langmem4j-examples/langmem4j-example-plain \
 #   docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-Test matrix (`mvn test`, **135 tests all green ✅**, plus 8 `@Disabled` reserved methods):
+Test matrix (`mvn test`, **165 tests all green ✅**, plus 4 `@Disabled` reserved methods):
 
 | Module                    | Tests                                   | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| langmem4j-core            | **96 passed**                           | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · **MemoryManager (24, +9: decay filter / re-ranking / NONE / get refresh / merge longer / union / overwrite / earliest createdAt / addAll merge)** · **MemoryFilter** (11) · **InMemoryMemoryStore-Filter** (5) · **MemoryDecayPolicy (11: NONE identity / 1H & 2H half-life curve / lastAccessedAt over createdAt / custom halfLife / pruneThreshold override)** · **MemoryMergePolicy (10: NONE identity / longer value / metadata union / earliest createdAt / \~now lastAccessedAt / incoming-embedding / fallback / no input mutation)** |
+| langmem4j-core            | **113 passed**                          | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · **MemoryManager (29: +5 compact — NONE noop / categoryGroup merge / old-keys deleted / empty ns noop / earliest createdAt; +9 decay/merge — decay filter & re-ranking / get refresh / merge longer & union / addAll merge)** · **MemoryFilter** (11) · **InMemoryMemoryStore-Filter** (5) · **MemoryDecayPolicy (11: NONE identity / half-life curve / lastAccessedAt over createdAt / custom halfLife / pruneThreshold override)** · **MemoryMergePolicy (10: NONE identity / longer value / metadata union / earliest createdAt / incoming-embedding / no input mutation)** · **MemoryCompactionPolicy (12: NONE identity / single-element skip / concatenation / metadata preserved / earliest createdAt / multi-group output / default group / empty list / no mutation / lastAccessedAt refreshed)** |
 | langmem4j-store-qdrant    | 4 passed **+ 4 @Disabled**              | QdrantMemoryStoreTest: deterministicId pure functions 4 cases (FNV×32/64/utf16-leak/Chinese); 4 integration test methods **@Disabled** (below)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **langmem4j-langgraph4j** | **7 passed**                            | LangGraph4jStoreAdapterTest: ①upsert+get round-trip (namespace non-empty / createdAt / embedding null) ②getByKey miss → empty ③deleteByKey → empty ④search keyword match (fruit 2 / blue 1) ⑤search limit=3 ⑥listKeys → UOE ⑦clearNamespace → UOE                                                                                                                                                                                                                                                                                                                                                        |
+| **langmem4j-strategy**    | **13 passed**                           | LlmSummarizationCompactionTest: ctor null validation / single-element skips LLM call / multi-group one summary per group / single-in-group stays as-is / category metadata preserved / earliest createdAt / key = category_compacted / no-category default group / empty list / LLM prompt contains original values / identity summarizer / no input mutation / lastAccessedAt refreshed                                                                                                                                                                                                                    |
 | langmem4j-tools-core      | **14 passed**                           | SaveMemoryService (6: ctor validation / KV parsing / boolean tags / empty metadata / delete / ns accessor); SearchMemoryService (8: get hit/miss / substring / empty msg / limit clamp 4 boundaries incl >20→20 / **metadata filter search** / list empty+non-empty / accessor)                                                                                                                                                                                                                                                                                                                          |
 | langmem4j-tools           | **14 passed**                           | SaveMemoryTool (7, thin-wrapper delegation + **namespace isolation**); SearchMemoryTool (7, thin-wrapper delegation)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Total**                 | **135 passed · 8 skipped · 0 failures** | All green ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Total**                 | **165 passed · 4 skipped · 0 failures** | All green ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 > **Integration test status**: V1 ships `QdrantMemoryStoreIntegrationTest` with `@Disabled` (4 E2E methods: ①upsert+get round-trip (metadata restore) ②search cosine ranking ③**search + MemoryFilter** (category=drink exact hit) ④delete + listKeys cleanup). To run locally:
 >
@@ -462,6 +519,8 @@ Test matrix (`mvn test`, **135 tests all green ✅**, plus 8 `@Disabled` reserve
 
 - [x] **langmem4j-tools-core (pure Java)** + **langmem4j-tools (LangChain4j)** layering
 
+- [x] **MemoryCompactionPolicy** (`compact()` manual trigger) + `langmem4j-strategy` module with `LlmSummarizationCompaction` (ChatModel or custom `Function` summarizer); auto-trigger on size threshold deferred to V2 (concurrency + search-consistency concerns)
+
 - [x] Plain Java examples (example-plain: PlainExample + ConversationMemoryDemo)
 
 - [ ] Spring Boot example (`example-springboot` is still a pom skeleton)
@@ -473,6 +532,8 @@ Test matrix (`mvn test`, **135 tests all green ✅**, plus 8 `@Disabled` reserve
 - [ ] **Semantic-level dedup (currently only keyMerge; true semantic dedup needs cosine similarity threshold)**
 
 - [ ] Memory Evolve: periodic LLM-driven merge / evict (Functional Core, stateless)
+
+- [ ] Compaction auto-trigger (size-threshold based) + compaction on langgraph4j backend (blocked on upstream listKeys API)
 
 ***
 

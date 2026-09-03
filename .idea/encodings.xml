@@ -13,6 +13,8 @@
     <file url="file://$PROJECT_DIR$/langmem4j-langgraph4j/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-store-qdrant/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-store-qdrant/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-strategy/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-strategy/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-tools-core/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-tools-core/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-tools/src/main/java" charset="UTF-8" />
