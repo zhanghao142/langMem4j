@@ -5,12 +5,16 @@ import com.langmem4j.core.manager.MemoryManager;
 import com.langmem4j.core.memory.MemoryCompactionPolicy;
 import com.langmem4j.core.memory.MemoryDecayPolicy;
 import com.langmem4j.core.memory.MemoryMergePolicy;
+import com.langmem4j.core.metrics.MemoryMetricsRecorder;
 import com.langmem4j.core.namespace.NamespaceResolver;
 import com.langmem4j.core.store.MemoryStore;
 import com.langmem4j.core.store.inmemory.InMemoryMemoryStore;
+import com.langmem4j.observability.MicrometerMemoryMetricsRecorder;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.qdrant.client.QdrantClient;
 import com.langmem4j.store.qdrant.QdrantMemoryStore;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -99,7 +103,8 @@ public class LangMem4jAutoConfiguration {
             MemoryStore store,
             LangMem4jProperties properties,
             ObjectProvider<EmbeddingGenerator> embeddingGenerator,
-            ObjectProvider<NamespaceResolver> namespaceResolver) {
+            ObjectProvider<NamespaceResolver> namespaceResolver,
+            ObjectProvider<MemoryMetricsRecorder> metricsRecorder) {
 
         MemoryManager.Builder builder = MemoryManager.withStore(store)
                 .withDefaultNamespace(properties.getDefaultNamespace());
@@ -109,6 +114,13 @@ public class LangMem4jAutoConfiguration {
         NamespaceResolver resolver = namespaceResolver.getIfAvailable();
         if (resolver != null) {
             builder.withNamespaceResolver(resolver);
+        }
+
+        // Metrics recorder — only present when Micrometer is on the classpath
+        // and metrics are enabled (nested MetricsConfiguration below).
+        MemoryMetricsRecorder recorder = metricsRecorder.getIfAvailable();
+        if (recorder != null) {
+            builder.withMetricsRecorder(recorder);
         }
 
         // Optional embedding generator bean — wire it in if the app defines one.
@@ -230,6 +242,53 @@ public class LangMem4jAutoConfiguration {
                 }
                 return Map.of();
             };
+        }
+    }
+
+    /**
+     * {@code langmem4j_*} Micrometer meters. Only loaded when Micrometer is
+     * on the classpath; disabled via {@code langmem4j.observability.metrics.enabled=false}.
+     * A custom {@link MemoryMetricsRecorder} bean always wins.
+     * <p>
+     * micrometer-core is a transitive (optional-in-spirit) dependency of
+     * langmem4j-observability, so the class being present does NOT mean a
+     * {@link MeterRegistry} <i>bean</i> exists (e.g. no actuator). When no
+     * registry bean is available the recorder silently degrades to NOOP —
+     * the application must still start.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(MeterRegistry.class)
+    @ConditionalOnProperty(name = "langmem4j.observability.metrics.enabled",
+            havingValue = "true", matchIfMissing = true)
+    static class MetricsConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean(MemoryMetricsRecorder.class)
+        public MemoryMetricsRecorder memoryMetricsRecorder(
+                ObjectProvider<MeterRegistry> registryProvider) {
+            MeterRegistry registry = registryProvider.getIfAvailable();
+            return registry != null
+                    ? new MicrometerMemoryMetricsRecorder(registry)
+                    : MemoryMetricsRecorder.NOOP;
+        }
+    }
+
+    /**
+     * Actuator {@code /actuator/health} contribution ("langMem4j" component).
+     * Only loaded when spring-boot-actuator is on the classpath; disabled via
+     * {@code langmem4j.observability.health.enabled=false}.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(HealthIndicator.class)
+    @ConditionalOnProperty(name = "langmem4j.observability.health.enabled",
+            havingValue = "true", matchIfMissing = true)
+    static class HealthConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean
+        public LangMem4jHealthIndicator langMem4jHealthIndicator(
+                MemoryManager manager, MemoryStore store) {
+            return new LangMem4jHealthIndicator(manager, store);
         }
     }
 }

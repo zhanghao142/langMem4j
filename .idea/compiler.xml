@@ -6,6 +6,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="langmem4j-observability" />
         <module name="langmem4j-example-plain" />
         <module name="langmem4j-tools-core" />
         <module name="langmem4j-example-springboot" />
@@ -24,6 +25,7 @@
       <module name="langmem4j-example-plain" options="-parameters" />
       <module name="langmem4j-example-springboot" options="-parameters" />
       <module name="langmem4j-langgraph4j" options="-parameters" />
+      <module name="langmem4j-observability" options="-parameters" />
       <module name="langmem4j-spring-boot-starter" options="-parameters" />
       <module name="langmem4j-store-qdrant" options="-parameters" />
       <module name="langmem4j-strategy" options="-parameters" />

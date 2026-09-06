@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.019" tests="8" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.016" tests="8" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="CN"/>
     <property name="sun.boot.library.path" value="C:\Users\16080\.jdks\ms-21.0.11\bin"/>
-    <property name="sun.java.command" value="C:\Users\16080\AppData\Local\Temp\surefire18152522992469092322\surefirebooter-20260906210813625_17.jar C:\Users\16080\AppData\Local\Temp\surefire18152522992469092322 2026-09-06T21-08-10_009-jvmRun1 surefire-20260906210813625_15tmp surefire_4-20260906210813625_16tmp"/>
+    <property name="sun.java.command" value="C:\Users\16080\AppData\Local\Temp\surefire13456761489021916485\surefirebooter-20260906214717234_17.jar C:\Users\16080\AppData\Local\Temp\surefire13456761489021916485 2026-09-06T21-47-10_651-jvmRun1 surefire-20260906214717234_15tmp surefire_4-20260906214717234_16tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="D:\langMem4j\langmem4j-tools-core\target\test-classes;D:\langMem4j\langmem4j-tools-core\target\classes;D:\langMem4j\langmem4j-core\target\classes;C:\Users\16080\.m2\repository\org\slf4j\slf4j-api\2.0.16\slf4j-api-2.0.16.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter\5.11.0\junit-jupiter-5.11.0.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.5\junit-jupiter-api-5.10.5.jar;C:\Users\16080\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\16080\.m2\repository\org\junit\platform\junit-platform-commons\1.10.5\junit-platform-commons-1.10.5.jar;C:\Users\16080\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.5\junit-jupiter-params-5.10.5.jar;C:\Users\16080\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.5\junit-jupiter-engine-5.10.5.jar;C:\Users\16080\.m2\repository\org\junit\platform\junit-platform-engine\1.10.5\junit-platform-engine-1.10.5.jar;C:\Users\16080\.m2\repository\org\assertj\assertj-core\3.26.3\assertj-core-3.26.3.jar;C:\Users\16080\.m2\repository\net\bytebuddy\byte-buddy\1.14.19\byte-buddy-1.14.19.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\16080\AppData\Local\Temp\surefire18152522992469092322\surefirebooter-20260906210813625_17.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\16080\AppData\Local\Temp\surefire13456761489021916485\surefirebooter-20260906214717234_17.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.11+10-LTS"/>
@@ -59,12 +59,12 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="searchMemory_with_metadata_filter" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.005"/>
-  <testcase name="namespace_accessor" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.002"/>
+  <testcase name="searchMemory_with_metadata_filter" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.003"/>
+  <testcase name="namespace_accessor" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.0"/>
   <testcase name="listMemories_empty_and_non_empty" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.003"/>
   <testcase name="constructor_rejects_bad_inputs" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.0"/>
-  <testcase name="searchMemory_limit_null_becomes_5_and_over_20_clamped_to_20" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.003"/>
+  <testcase name="searchMemory_limit_null_becomes_5_and_over_20_clamped_to_20" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.002"/>
   <testcase name="getMemory_found_and_not_found_messages" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.001"/>
   <testcase name="searchMemory_substring_ranks_hits_and_formats_them" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.001"/>
-  <testcase name="searchMemory_empty_returns_dedicated_message" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.0"/>
+  <testcase name="searchMemory_empty_returns_dedicated_message" classname="com.langmem4j.tools.core.SearchMemoryServiceTest" time="0.001"/>
 </testsuite>

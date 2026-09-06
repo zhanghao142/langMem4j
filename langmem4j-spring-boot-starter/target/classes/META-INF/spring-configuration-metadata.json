@@ -30,6 +30,24 @@
       "sourceMethod": "getNamespaceCache()"
     },
     {
+      "name": "langmem4j.observability",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Observability",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getObservability()"
+    },
+    {
+      "name": "langmem4j.observability.health",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Observability$Health",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Observability",
+      "sourceMethod": "getHealth()"
+    },
+    {
+      "name": "langmem4j.observability.metrics",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Observability$Metrics",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Observability",
+      "sourceMethod": "getMetrics()"
+    },
+    {
       "name": "langmem4j.store",
       "type": "com.langmem4j.spring.LangMem4jProperties$Store",
       "sourceType": "com.langmem4j.spring.LangMem4jProperties",
@@ -117,6 +135,18 @@
       "type": "java.lang.String",
       "description": "SpEL template for runtime namespace resolution, e.g. {@code user_#{#principal}} or {@code tenant_#{#header['X-Tenant-Id'] ?: 'anonymous'}}. When set, every no-namespace MemoryManager call routes to the namespace rendered from the current context; a null\/blank render (or a missing referenced variable) falls back to {@code default-namespace}. Leave unset for the classic static default namespace.",
       "sourceType": "com.langmem4j.spring.LangMem4jProperties"
+    },
+    {
+      "name": "langmem4j.observability.health.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Observability$Health",
+      "defaultValue": true
+    },
+    {
+      "name": "langmem4j.observability.metrics.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Observability$Metrics",
+      "defaultValue": true
     },
     {
       "name": "langmem4j.store.qdrant.api-key",

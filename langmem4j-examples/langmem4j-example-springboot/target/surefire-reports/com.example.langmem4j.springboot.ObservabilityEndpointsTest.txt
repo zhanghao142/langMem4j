@@ -1,0 +1,38 @@
+-------------------------------------------------------------------------------
+Test set: com.example.langmem4j.springboot.ObservabilityEndpointsTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 4.054 s <<< FAILURE! -- in com.example.langmem4j.springboot.ObservabilityEndpointsTest
+com.example.langmem4j.springboot.ObservabilityEndpointsTest.metrics_endpoint_exposes_search_timer_once_searched -- Time elapsed: 1.744 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<404>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.example.langmem4j.springboot.ObservabilityEndpointsTest.metrics_endpoint_exposes_search_timer_once_searched(ObservabilityEndpointsTest.java:55)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.example.langmem4j.springboot.ObservabilityEndpointsTest.health_endpoint_reports_langmem4j_component_with_store_details -- Time elapsed: 0.049 s <<< FAILURE!
+java.lang.AssertionError: No value at JSON path "$.components.langMem4j.status"
+	at org.springframework.test.util.JsonPathExpectationsHelper.evaluateJsonPath(JsonPathExpectationsHelper.java:302)
+	at org.springframework.test.util.JsonPathExpectationsHelper.assertValue(JsonPathExpectationsHelper.java:99)
+	at org.springframework.test.web.servlet.result.JsonPathResultMatchers.lambda$value$2(JsonPathResultMatchers.java:111)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.example.langmem4j.springboot.ObservabilityEndpointsTest.health_endpoint_reports_langmem4j_component_with_store_details(ObservabilityEndpointsTest.java:65)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: com.jayway.jsonpath.PathNotFoundException: Missing property in path $['components']['langMem4j']
+
+com.example.langmem4j.springboot.ObservabilityEndpointsTest.metrics_endpoint_exposes_langmem4j_add_total_that_counts_requests -- Time elapsed: 0.041 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<404>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.example.langmem4j.springboot.ObservabilityEndpointsTest.metrics_endpoint_exposes_langmem4j_add_total_that_counts_requests(ObservabilityEndpointsTest.java:39)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

@@ -4,6 +4,8 @@ com\langmem4j\core\embedding\EmbeddingGenerator.class
 com\langmem4j\core\memory\MemoryDecayPolicy.class
 com\langmem4j\core\store\package-info.class
 com\langmem4j\core\store\MemoryFilter$Builder.class
+com\langmem4j\core\metrics\MemoryMetricsRecorder$1.class
+com\langmem4j\core\metrics\MemoryMetricsRecorder.class
 com\langmem4j\core\memory\package-info.class
 com\langmem4j\core\store\inmemory\InMemoryMemoryStore.class
 com\langmem4j\core\memory\MemoryCompactionPolicy.class

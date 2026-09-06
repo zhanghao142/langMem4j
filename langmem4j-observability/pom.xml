@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-observability</artifactId>
+
+    <name>langmem4j-observability</name>
+    <description>
+        Micrometer implementation of the core MemoryMetricsRecorder SPI.
+        Maps manager events to langmem4j_* meters (counters, timers, decay
+        distribution summary) with per-namespace tags. Micrometer is optional:
+        consumers (e.g. the Spring Boot starter) only wire this module when
+        a MeterRegistry is on the classpath.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-core</artifactId>
+        </dependency>
+
+        <!-- Optional: the module exists for Micrometer, but marking it
+             optional keeps it out of consumers that only want core.
+             Version managed by the Spring Boot BOM in the parent. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test stack. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

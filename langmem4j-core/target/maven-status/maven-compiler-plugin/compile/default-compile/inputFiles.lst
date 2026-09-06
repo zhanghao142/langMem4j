@@ -6,6 +6,7 @@ D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\MemoryCompac
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\MemoryDecayPolicy.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\MemoryMergePolicy.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\memory\package-info.java
+D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\metrics\MemoryMetricsRecorder.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\namespace\NamespaceResolver.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\store\inmemory\InMemoryMemoryStore.java
 D:\langMem4j\langmem4j-core\src\main\java\com\langmem4j\core\store\inmemory\package-info.java

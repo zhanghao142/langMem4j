@@ -32,6 +32,11 @@ import java.time.Duration;
  *   compaction:
  *     enabled: false
  *     policy: category-group  # category-group (V1; "llm" requires manual wiring)
+ *   observability:
+ *     metrics:
+ *       enabled: true          # langmem4j_* meters when Micrometer is present
+ *     health:
+ *       enabled: true          # actuator /actuator/health "langMem4j" component
  * }</pre>
  */
 @ConfigurationProperties(prefix = "langmem4j")
@@ -55,6 +60,7 @@ public class LangMem4jProperties {
     private final Decay decay = new Decay();
     private final Merge merge = new Merge();
     private final Compaction compaction = new Compaction();
+    private final Observability observability = new Observability();
 
     public String getDefaultNamespace() { return defaultNamespace; }
     public void setDefaultNamespace(String defaultNamespace) { this.defaultNamespace = defaultNamespace; }
@@ -67,6 +73,7 @@ public class LangMem4jProperties {
     public Decay getDecay() { return decay; }
     public Merge getMerge() { return merge; }
     public Compaction getCompaction() { return compaction; }
+    public Observability getObservability() { return observability; }
 
     /**
      * Result cache for {@code namespace-pattern} resolution. Only applies to
@@ -162,5 +169,38 @@ public class LangMem4jProperties {
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public String getPolicy() { return policy; }
         public void setPolicy(String policy) { this.policy = policy; }
+    }
+
+    /** Metrics / health-check settings. */
+    public static class Observability {
+        private final Metrics metrics = new Metrics();
+        private final Health health = new Health();
+
+        public Metrics getMetrics() { return metrics; }
+        public Health getHealth() { return health; }
+
+        /**
+         * {@code langmem4j_*} Micrometer meters (add/search/get/compact
+         * counters, timers, decay distribution). Only applies when a
+         * {@code MeterRegistry} is on the classpath.
+         */
+        public static class Metrics {
+            private boolean enabled = true;
+
+            public boolean isEnabled() { return enabled; }
+            public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        }
+
+        /**
+         * Actuator {@code /actuator/health} contribution ("langMem4j"
+         * component: write-read-delete probe against the store). Only applies
+         * when spring-boot-actuator is on the classpath.
+         */
+        public static class Health {
+            private boolean enabled = true;
+
+            public boolean isEnabled() { return enabled; }
+            public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        }
     }
 }

@@ -11,6 +11,8 @@
     <file url="file://$PROJECT_DIR$/langmem4j-examples/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-langgraph4j/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-langgraph4j/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-observability/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/langmem4j-observability/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-spring-boot-starter/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-spring-boot-starter/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/langmem4j-store-qdrant/src/main/java" charset="UTF-8" />

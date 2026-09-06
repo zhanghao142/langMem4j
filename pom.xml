@@ -24,6 +24,7 @@
         <module>langmem4j-strategy</module>
         <module>langmem4j-tools-core</module>
         <module>langmem4j-tools</module>
+        <module>langmem4j-observability</module>
         <module>langmem4j-spring-boot-starter</module>
         <module>langmem4j-examples</module>
     </modules>
@@ -121,6 +122,11 @@
             <dependency>
                 <groupId>com.langmem4j</groupId>
                 <artifactId>langmem4j-strategy</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.langmem4j</groupId>
+                <artifactId>langmem4j-observability</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -1,11 +1,14 @@
 com\langmem4j\core\memory\MemoryTest.class
-com\langmem4j\core\memory\MemoryDecayPolicyTest.class
-com\langmem4j\core\memory\MemoryMergePolicyTest.class
 com\langmem4j\core\manager\MemoryManagerTest.class
 com\langmem4j\core\memory\MemoryDecayPolicyTest$1.class
 com\langmem4j\core\manager\MemoryManagerNamespaceResolverTest.class
 com\langmem4j\core\store\inmemory\InMemoryMemoryStoreFilterTest.class
-com\langmem4j\core\store\inmemory\InMemoryMemoryStoreTest.class
 com\langmem4j\core\memory\MemoryCompactionPolicyTest.class
 com\langmem4j\core\store\MemoryFilterTest.class
+com\langmem4j\core\memory\MemoryDecayPolicyTest.class
+com\langmem4j\core\memory\MemoryMergePolicyTest.class
+com\langmem4j\core\manager\MemoryManagerMetricsTest.class
+com\langmem4j\core\store\inmemory\InMemoryMemoryStoreTest.class
+com\langmem4j\core\manager\MemoryManagerMetricsTest$ThrowingStore.class
 com\langmem4j\core\store\inmemory\CosineSearchTest.class
+com\langmem4j\core\manager\MemoryManagerMetricsTest$RecordingRecorder.class

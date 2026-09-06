@@ -1,3 +1,4 @@
-com\example\langmem4j\springboot\DemoApplicationTest.class
 com\example\langmem4j\springboot\MultiTenancyIsolationTest.class
+com\example\langmem4j\springboot\ObservabilityEndpointsTest.class
+com\example\langmem4j\springboot\DemoApplicationTest.class
 com\example\langmem4j\springboot\CompactEndpointTest.class

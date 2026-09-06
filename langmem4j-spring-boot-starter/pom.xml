@@ -80,10 +80,35 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Observability: Micrometer recorder (its own micrometer dep is
+             optional, so nothing leaks to apps without a metrics stack).
+             Wired only when a MeterRegistry is on the classpath. -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-observability</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional: actuator health endpoint integration. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-actuator</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test stack. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

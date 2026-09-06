@@ -5,6 +5,7 @@ import com.langmem4j.core.memory.Memory;
 import com.langmem4j.core.memory.MemoryCompactionPolicy;
 import com.langmem4j.core.memory.MemoryDecayPolicy;
 import com.langmem4j.core.memory.MemoryMergePolicy;
+import com.langmem4j.core.metrics.MemoryMetricsRecorder;
 import com.langmem4j.core.namespace.NamespaceResolver;
 import com.langmem4j.core.store.MemoryFilter;
 import com.langmem4j.core.store.MemoryStore;
@@ -12,6 +13,7 @@ import com.langmem4j.core.store.inmemory.InMemoryMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -55,6 +57,7 @@ public class MemoryManager {
     private final MemoryDecayPolicy decayPolicy;
     private final MemoryMergePolicy mergePolicy;
     private final MemoryCompactionPolicy compactionPolicy;
+    private final MemoryMetricsRecorder metricsRecorder;
 
     private MemoryManager(Builder builder) {
         this.store = builder.store;
@@ -64,6 +67,7 @@ public class MemoryManager {
         this.decayPolicy = builder.decayPolicy;
         this.mergePolicy = builder.mergePolicy;
         this.compactionPolicy = builder.compactionPolicy;
+        this.metricsRecorder = builder.metricsRecorder;
     }
 
     // ================================================================
@@ -98,6 +102,7 @@ public class MemoryManager {
         private MemoryDecayPolicy decayPolicy = MemoryDecayPolicy.NONE;
         private MemoryMergePolicy mergePolicy = MemoryMergePolicy.NONE;
         private MemoryCompactionPolicy compactionPolicy = MemoryCompactionPolicy.NONE;
+        private MemoryMetricsRecorder metricsRecorder = MemoryMetricsRecorder.NOOP;
 
         Builder store(MemoryStore store) { this.store = store; return this; }
 
@@ -168,6 +173,18 @@ public class MemoryManager {
             return this;
         }
 
+        /**
+         * Sets the metrics recorder notified by {@code add} / {@code search} /
+         * {@code get} / {@code compact} and namespace resolution. Optional;
+         * defaults to {@link MemoryMetricsRecorder#NOOP} (zero overhead).
+         * The Micrometer implementation lives in the
+         * {@code langmem4j-observability} module.
+         */
+        public Builder withMetricsRecorder(MemoryMetricsRecorder recorder) {
+            this.metricsRecorder = recorder == null ? MemoryMetricsRecorder.NOOP : recorder;
+            return this;
+        }
+
         public MemoryManager build() {
             if (store == null) {
                 throw new IllegalStateException("store must be set — use MemoryManager.inMemory() or withStore()");
@@ -209,16 +226,22 @@ public class MemoryManager {
      * transparently before writing.
      */
     public void add(String namespace, String key, String value, Map<String, Object> metadata) {
-        Memory memory = Memory.of(namespace, key, value, metadata);
+        try {
+            Memory memory = Memory.of(namespace, key, value, metadata);
 
-        if (embeddingGenerator != null) {
-            float[] vector = embeddingGenerator.embed(value);
-            memory = memory.withEmbedding(vector);
-            log.debug("auto-embedded ns={} key={} dim={}", namespace, key, vector.length);
+            if (embeddingGenerator != null) {
+                float[] vector = embeddingGenerator.embed(value);
+                memory = memory.withEmbedding(vector);
+                log.debug("auto-embedded ns={} key={} dim={}", namespace, key, vector.length);
+            }
+
+            memory = applyMerge(namespace, memory);
+            store.upsert(namespace, memory);
+            metricsRecorder.recordAdd(namespace, true);
+        } catch (RuntimeException e) {
+            metricsRecorder.recordAdd(namespace, false);
+            throw e;
         }
-
-        memory = applyMerge(namespace, memory);
-        store.upsert(namespace, memory);
     }
 
     /**
@@ -227,12 +250,18 @@ public class MemoryManager {
      * embedding or complex metadata).
      */
     public void add(Memory memory) {
-        Memory toUpsert = memory;
-        if (toUpsert.embeddingVector() == null && embeddingGenerator != null) {
-            toUpsert = toUpsert.withEmbedding(embeddingGenerator.embed(memory.value()));
+        try {
+            Memory toUpsert = memory;
+            if (toUpsert.embeddingVector() == null && embeddingGenerator != null) {
+                toUpsert = toUpsert.withEmbedding(embeddingGenerator.embed(memory.value()));
+            }
+            toUpsert = applyMerge(memory.namespace(), toUpsert);
+            store.upsert(memory.namespace(), toUpsert);
+            metricsRecorder.recordAdd(memory.namespace(), true);
+        } catch (RuntimeException e) {
+            metricsRecorder.recordAdd(memory.namespace(), false);
+            throw e;
         }
-        toUpsert = applyMerge(memory.namespace(), toUpsert);
-        store.upsert(memory.namespace(), toUpsert);
     }
 
     /**
@@ -244,16 +273,22 @@ public class MemoryManager {
      * semantic consistency with {@code add()}.
      */
     public void addAll(String namespace, List<Memory> memories) {
-        List<Memory> enriched = memories.stream()
-                .map(m -> {
-                    if (m.embeddingVector() == null && embeddingGenerator != null) {
-                        return m.withEmbedding(embeddingGenerator.embed(m.value()));
-                    }
-                    return m;
-                })
-                .map(m -> applyMerge(namespace, m))
-                .collect(Collectors.toList());
-        store.upsertBatch(namespace, enriched);
+        try {
+            List<Memory> enriched = memories.stream()
+                    .map(m -> {
+                        if (m.embeddingVector() == null && embeddingGenerator != null) {
+                            return m.withEmbedding(embeddingGenerator.embed(m.value()));
+                        }
+                        return m;
+                    })
+                    .map(m -> applyMerge(namespace, m))
+                    .collect(Collectors.toList());
+            store.upsertBatch(namespace, enriched);
+            metricsRecorder.recordAdd(namespace, true);
+        } catch (RuntimeException e) {
+            metricsRecorder.recordAdd(namespace, false);
+            throw e;
+        }
     }
 
     /** Removes a memory by key from the default namespace. */
@@ -288,7 +323,7 @@ public class MemoryManager {
      * store, pushing back the decay clock.
      */
     public Optional<Memory> get(String key) {
-        return refreshAccessedAt(store.getByKey(defaultNs(), key));
+        return get(defaultNs(), key);
     }
 
     /**
@@ -299,7 +334,9 @@ public class MemoryManager {
      * store.
      */
     public Optional<Memory> get(String namespace, String key) {
-        return refreshAccessedAt(store.getByKey(namespace, key));
+        Optional<Memory> result = refreshAccessedAt(store.getByKey(namespace, key));
+        metricsRecorder.recordGet(namespace, result.isPresent());
+        return result;
     }
 
     /** Lists all memory keys in the default namespace. */
@@ -340,7 +377,15 @@ public class MemoryManager {
      * re-ranked by decay factor (higher = more recent = first).
      */
     public List<Memory> search(String namespace, String query, int limit) {
-        return applyDecay(store.search(namespace, query, limit));
+        long start = System.nanoTime();
+        try {
+            List<Memory> results = applyDecay(store.search(namespace, query, limit));
+            metricsRecorder.recordSearch(namespace, Duration.ofNanos(System.nanoTime() - start), true);
+            return results;
+        } catch (RuntimeException e) {
+            metricsRecorder.recordSearch(namespace, Duration.ofNanos(System.nanoTime() - start), false);
+            throw e;
+        }
     }
 
     /**
@@ -357,8 +402,16 @@ public class MemoryManager {
      * }</pre>
      */
     public List<Memory> search(String namespace, String query, int limit, MemoryFilter filter) {
-        return applyDecay(store.search(namespace, query, limit,
-                filter == null ? MemoryFilter.NONE : filter));
+        long start = System.nanoTime();
+        try {
+            List<Memory> results = applyDecay(store.search(namespace, query, limit,
+                    filter == null ? MemoryFilter.NONE : filter));
+            metricsRecorder.recordSearch(namespace, Duration.ofNanos(System.nanoTime() - start), true);
+            return results;
+        } catch (RuntimeException e) {
+            metricsRecorder.recordSearch(namespace, Duration.ofNanos(System.nanoTime() - start), false);
+            throw e;
+        }
     }
 
     /** Default-namespace + explicit-limit variant of the filtered search. */
@@ -406,6 +459,11 @@ public class MemoryManager {
         return compactionPolicy;
     }
 
+    /** Returns the metrics recorder (never null; NOOP by default). */
+    public MemoryMetricsRecorder metricsRecorder() {
+        return metricsRecorder;
+    }
+
     // ================================================================
     // Compaction API
     // ================================================================
@@ -433,30 +491,40 @@ public class MemoryManager {
     public void compact(String namespace) {
         if (compactionPolicy == MemoryCompactionPolicy.NONE) return;
 
-        List<String> keys = store.listKeys(namespace);
-        if (keys.isEmpty()) return;
+        String policy = policyName(compactionPolicy);
+        long start = System.nanoTime();
+        try {
+            List<String> keys = store.listKeys(namespace);
+            if (keys.isEmpty()) return;
 
-        List<Memory> all = new ArrayList<>();
-        for (String key : keys) {
-            store.getByKey(namespace, key).ifPresent(all::add);
-        }
-        if (all.isEmpty()) return;
-
-        List<Memory> compacted = compactionPolicy.compact(namespace, all);
-        log.info("compact ns={} before={} after={}", namespace, all.size(), compacted.size());
-
-        // Delete all old memories
-        for (Memory m : all) {
-            store.deleteByKey(namespace, m.key());
-        }
-
-        // Store compacted replacements (with embedding if generator available)
-        for (Memory m : compacted) {
-            Memory toStore = m;
-            if (m.embeddingVector() == null && embeddingGenerator != null) {
-                toStore = m.withEmbedding(embeddingGenerator.embed(m.value()));
+            List<Memory> all = new ArrayList<>();
+            for (String key : keys) {
+                store.getByKey(namespace, key).ifPresent(all::add);
             }
-            store.upsert(namespace, toStore);
+            if (all.isEmpty()) return;
+
+            List<Memory> compacted = compactionPolicy.compact(namespace, all);
+            log.info("compact ns={} before={} after={}", namespace, all.size(), compacted.size());
+
+            // Delete all old memories
+            for (Memory m : all) {
+                store.deleteByKey(namespace, m.key());
+            }
+
+            // Store compacted replacements (with embedding if generator available)
+            for (Memory m : compacted) {
+                Memory toStore = m;
+                if (m.embeddingVector() == null && embeddingGenerator != null) {
+                    toStore = m.withEmbedding(embeddingGenerator.embed(m.value()));
+                }
+                store.upsert(namespace, toStore);
+            }
+            metricsRecorder.recordCompact(namespace, policy,
+                    Duration.ofNanos(System.nanoTime() - start), true);
+        } catch (RuntimeException e) {
+            metricsRecorder.recordCompact(namespace, policy,
+                    Duration.ofNanos(System.nanoTime() - start), false);
+            throw e;
         }
     }
 
@@ -507,7 +575,7 @@ public class MemoryManager {
         }
         long now = System.currentTimeMillis();
         float threshold = decayPolicy.pruneThreshold();
-        return results.stream()
+        List<Memory> surviving = results.stream()
                 .filter(m -> decayPolicy.decayFactor(
                         m.createdAt(), m.lastAccessedAt(), now) >= threshold)
                 .sorted(Comparator.comparingDouble(
@@ -515,6 +583,10 @@ public class MemoryManager {
                                 m.createdAt(), m.lastAccessedAt(), now)
                 ).reversed())
                 .collect(Collectors.toList());
+        surviving.forEach(m -> metricsRecorder.recordDecayFactor(
+                m.namespace(), decayPolicy.decayFactor(
+                        m.createdAt(), m.lastAccessedAt(), now)));
+        return surviving;
     }
 
     /**
@@ -534,11 +606,24 @@ public class MemoryManager {
         return Optional.of(refreshed);
     }
 
+    /**
+     * Stable metric tag for a policy instance: named classes use their simple
+     * name; lambdas (e.g. {@code categoryGroup()}) collapse to "lambda" —
+     * synthetic lambda names contain a hash and would explode tag cardinality.
+     */
+    private static String policyName(Object policy) {
+        String name = policy.getClass().getSimpleName();
+        return name.contains("Lambda") || name.isBlank() ? "lambda" : name;
+    }
+
     private String defaultNs() {
         // Runtime resolution first — a non-blank result routes this call to
         // the caller's context (multi-tenant). FIXED (the default) returns
         // null and falls through to the configured default namespace.
         String resolved = namespaceResolver.resolve();
+        metricsRecorder.recordNamespaceResolve(namespaceResolver == NamespaceResolver.FIXED
+                ? "fixed"
+                : resolved != null && !resolved.isBlank() ? "resolver" : "fallback");
         if (resolved != null && !resolved.isBlank()) {
             return resolved;
         }
