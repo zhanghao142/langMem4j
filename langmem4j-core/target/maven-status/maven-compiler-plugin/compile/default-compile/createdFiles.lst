@@ -12,5 +12,6 @@ com\langmem4j\core\manager\MemoryManager.class
 com\langmem4j\core\manager\package-info.class
 com\langmem4j\core\memory\MemoryMergePolicy.class
 com\langmem4j\core\memory\Memory.class
+com\langmem4j\core\namespace\NamespaceResolver.class
 com\langmem4j\core\store\MemoryFilter.class
 com\langmem4j\core\store\inmemory\package-info.class

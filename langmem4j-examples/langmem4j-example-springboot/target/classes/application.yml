@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: langmem4j-demo
+
+langmem4j:
+  default-namespace: user_demo
+  # Runtime namespace resolution: every request routes to user_<X-User-Id>;
+  # requests without the header share the user_anonymous bucket.
+  namespace-pattern: "user_#{#header['X-User-Id'] ?: 'anonymous'}"
+  namespace-cache:
+    enabled: true
+    max-size: 1000
+    expire-after-write: 10m
+  store:
+    type: inmemory          # switch to "qdrant" (with an EmbeddingGenerator bean) for production
+  decay:
+    enabled: true
+    half-life: 7d
+    prune-threshold: 0.01
+  merge:
+    enabled: true
+  compaction:
+    enabled: true
+    policy: category-group
+
+server:
+  port: 8080

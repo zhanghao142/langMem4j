@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.langmem4j</groupId>
+        <artifactId>langmem4j</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>langmem4j-spring-boot-starter</artifactId>
+
+    <name>langmem4j-spring-boot-starter</name>
+    <description>
+        Spring Boot auto-configuration for langMem4j. One dependency, zero Java code:
+        expose a MemoryManager bean driven by langmem4j.* properties
+        (store type, decay, merge, compaction). Ships with InMemory store built-in;
+        Qdrant is activated via langmem4j.store.type=qdrant when the Qdrant client
+        is on the classpath.
+    </description>
+
+    <dependencies>
+        <!-- langMem4j core (MemoryManager + InMemory store). -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-core</artifactId>
+        </dependency>
+
+        <!-- Spring Boot auto-configuration infrastructure. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Metadata for IDE auto-completion of langmem4j.* properties. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional backend: Qdrant. Loaded only when
+             langmem4j.store.type=qdrant AND the client is on the classpath. -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-store-qdrant</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional strategies: LLM-driven compaction etc.
+             V1 starter only wires category-group; wire langmem4j-strategy beans
+             manually if you need LlmSummarizationCompaction. -->
+        <dependency>
+            <groupId>com.langmem4j</groupId>
+            <artifactId>langmem4j-strategy</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional namespace-pattern sources: request headers (#header)
+             from the current web request. Guarded by @ConditionalOnClass. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Optional namespace-pattern sources: #principal from the
+             SecurityContext. Guarded by @ConditionalOnClass. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test stack. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

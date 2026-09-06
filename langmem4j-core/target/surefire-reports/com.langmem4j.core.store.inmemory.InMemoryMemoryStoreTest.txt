@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.langmem4j.core.store.inmemory.InMemoryMemoryStoreTest
 -------------------------------------------------------------------------------
-Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in com.langmem4j.core.store.inmemory.InMemoryMemoryStoreTest
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in com.langmem4j.core.store.inmemory.InMemoryMemoryStoreTest

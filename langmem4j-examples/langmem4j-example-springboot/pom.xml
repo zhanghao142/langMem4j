@@ -16,20 +16,19 @@
 
     <name>langmem4j-example-springboot</name>
     <description>
-        ⚠️ SKELETON (占位骨架).
-        Spring Boot 接入示例的 pom 坐标，用于后续扩展：@Bean MemoryStore + injected
-        Tools + HTTP endpoints。当前没有 @SpringBootApplication main class，因此
-        spring-boot:repackage 被本 pom 明确 skip —— 不要在此状态下打可执行 jar。
+        Spring Boot integration example for langMem4j: one starter dependency,
+        zero Java configuration. MemoryManager is auto-configured from
+        application.yml (InMemory store + decay + merge + compaction) and
+        exposed through a REST controller. Note: the application package is
+        com.example.langmem4j (NOT com.langmem4j.*) so that component scanning
+        does not pick up the starter's auto-configuration classes.
     </description>
 
     <dependencies>
+        <!-- The whole integration: one starter, all beans auto-wired. -->
         <dependency>
             <groupId>com.langmem4j</groupId>
-            <artifactId>langmem4j-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.langmem4j</groupId>
-            <artifactId>langmem4j-tools</artifactId>
+            <artifactId>langmem4j-spring-boot-starter</artifactId>
         </dependency>
 
         <dependency>
@@ -49,18 +48,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default</id>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                        <configuration>
-                            <!-- SKELETON: no @SpringBootApplication main class yet. -->
-                            <skip>true</skip>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

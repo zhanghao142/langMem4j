@@ -1,0 +1,6 @@
+com\langmem4j\spring\RequestNamespaceVariablesTest.class
+com\langmem4j\spring\PatternNamespaceResolverTest.class
+com\langmem4j\spring\LangMem4jAutoConfigurationTest$CustomStoreConfig.class
+com\langmem4j\spring\LangMem4jAutoConfigurationTest$CustomResolverConfig.class
+com\langmem4j\spring\LangMem4jAutoConfigurationTest.class
+com\langmem4j\spring\LangMem4jAutoConfigurationTest$CustomManagerConfig.class

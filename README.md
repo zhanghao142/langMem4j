@@ -1,4 +1,4 @@
-# langMem4j
+﻿# langMem4j
 
 > Long-term memory middleware for the Java ecosystem.
 
@@ -91,6 +91,10 @@ Use standalone, or expose as tool functions to **LangChain4j** / **Spring AI**.
 
 - **langgraph4j Store SPI adapter** (`langmem4j-langgraph4j`): use any `org.bsc.langgraph4j.store.Store` (InMemoryStore, RedisStore, …) as a langMem4j backend; decay / merge / MemoryFilter all work at the MemoryManager layer
 
+- **Spring Boot starter** (`langmem4j-spring-boot-starter`): one dependency, zero Java config — `MemoryManager` / `MemoryStore` auto-wired from `langmem4j.*` properties (store type, decay, merge, compaction); all beans `@ConditionalOnMissingBean`, so your own beans always win
+
+- **Runtime namespace resolution** (`NamespaceResolver` SPI in core, SpEL `namespace-pattern` in the starter): multi-tenant routing with zero code — `user_#{#header['X-User-Id'] ?: 'anonymous'}` per-request; `SimpleEvaluationContext` whitelist (no `T()` / constructors), case-insensitive headers, optional LRU result cache for principal-only patterns
+
 ***
 
 ## 🧩 Module Structure
@@ -126,14 +130,17 @@ langmem4j/
 │   ├── SaveMemoryTool           // 1:1 delegate to SaveMemoryService
 │   └── SearchMemoryTool         // 1:1 delegate to SearchMemoryService
 │
+├── langmem4j-spring-boot-starter ← optional: Spring Boot auto-configuration
+│   ├── LangMem4jAutoConfiguration  // @AutoConfiguration: store + manager beans, @ConditionalOnMissingBean
+│   ├── LangMem4jProperties         // @ConfigurationProperties("langmem4j"): store/decay/merge/compaction
+│   └── META-INF/spring/…imports    // Spring Boot 3 auto-config registration
+│
 └── langmem4j-examples/
     └── langmem4j-example-plain
         ├── PlainExample               // minimal: MemoryManager + tools-core dual paths
         └── ConversationMemoryDemo     // 10-round conversation: merge + decay + filter full chain
-    └── langmem4j-example-springboot  // ⚠️ skeleton only (pom, not yet implemented)
+    └── langmem4j-example-springboot   // starter demo: yml-only config + REST controller
 ```
-
-> **Spring Boot example status**: only an empty pom.xml module exists — no runnable `@AiService` or AutoConfig code yet. See `example-plain` for core capabilities. Full example coming in 0.2.0.
 
 ***
 
@@ -183,9 +190,61 @@ langmem4j/
     <artifactId>langmem4j-strategy</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
+
+<!-- Optional: Spring Boot starter (auto-configured MemoryManager) -->
+<dependency>
+    <groupId>com.langmem4j</groupId>
+    <artifactId>langmem4j-spring-boot-starter</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
 ```
 
-### 1. 3 Lines to Run (InMemory + Metadata Filter + Decay / Merge)
+### 1. Spring Boot: 1 Dependency + 0 Lines of Java
+
+```yaml
+# application.yml
+langmem4j:
+  default-namespace: user_alice
+  # Multi-tenant routing, zero code: resolve the namespace per request.
+  # Available variables: #header['X-...'] (current HTTP headers, case-insensitive),
+  # #principal (authenticated user name, when spring-security-core is present).
+  # Leave unset → always use default-namespace.
+  namespace-pattern: "user_#{#header['X-User-Id'] ?: 'anonymous'}"
+  namespace-cache:                  # optional: skip SpEL re-evaluation for principal-only patterns
+    enabled: true
+    max-size: 1000
+    expire-after-write: 10m
+  store:
+    type: inmemory          # or qdrant (requires an EmbeddingGenerator bean)
+    # qdrant:
+    #   host: localhost
+    #   port: 6334
+    #   api-key: ${QDRANT_API_KEY}
+    #   use-tls: false
+    #   vector-size: 1536
+  decay:
+    enabled: true
+    half-life: 7d           # Duration; also PT2H etc.
+    prune-threshold: 0.01
+  merge:
+    enabled: true
+  compaction:
+    enabled: true
+    policy: category-group  # llm intentionally fails fast — register LlmSummarizationCompaction as a bean instead
+```
+
+```java
+@Autowired MemoryManager manager;   // that's the whole integration
+
+manager.add("food", "Alice loves hot pot", Map.of("category", "preference"));
+manager.compact();                  // fragment → summary, manual trigger
+```
+
+**Multi-tenancy with `namespace-pattern`**: with the pattern above, a request carrying `X-User-Id: alice` is routed to namespace `user_alice`, one without the header to `user_anonymous` — the controller stays tenant-unaware (no header parsing, no per-tenant branches). Resolution happens on every call, so context switches mid-thread are isolated. The pattern is evaluated with Spring's `SimpleEvaluationContext`: no `T()` type references, no constructors, no static methods — only the whitelisted `#header` / `#principal` variables are visible. Header-dependent results are never cached; principal-only patterns (e.g. `user_#{#principal}`) are cached with the configured TTL. When a referenced variable is unavailable (background job, unauthenticated) the resolver returns null and the manager falls back to `default-namespace`. Non-Spring users can implement the `NamespaceResolver` SPI in core directly (`MemoryManager.withNamespaceResolver(...)`); an explicit `add(ns, key, value)` argument always wins over the resolver.
+
+All starter beans are `@ConditionalOnMissingBean` — define your own `MemoryStore` / `MemoryManager` bean and the starter steps aside. See `langmem4j-examples/langmem4j-example-springboot` for a runnable REST demo (`/api/memories` save / search / compact).
+
+### 2. 3 Lines to Run (InMemory + Metadata Filter + Decay / Merge)
 
 ```java
 MemoryManager manager = MemoryManager.inMemory()
@@ -286,7 +345,7 @@ mvn -pl langmem4j-langgraph4j org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
 
 > **listKeys / clearNamespace**: langgraph4j's Store SPI doesn't expose these methods, so `LangGraph4jStoreAdapter` throws `UnsupportedOperationException` (verified in demo). To clear data, delete known keys individually, or wait for langgraph4j API upgrades.
 
-### 4. Expose to LLM (pick one)
+### 5. Expose to LLM (pick one)
 
 #### Option A: LangChain4j @Tool (zero glue code)
 
@@ -452,7 +511,7 @@ MemoryDecayPolicy weekendAware = (createdAt, lastAccessedAt, now) -> {
 | **Design**        | 5 SPIs (`MemoryStore` / `EmbeddingGenerator` / `MemoryDecayPolicy` / `MemoryMergePolicy` / `MemoryCompactionPolicy`) + 1 facade; **core + tools-core: zero framework deps at runtime** | Monolithic SDK, tightly coupled to specific Vector DB / LLM provider; decay usually DIY |
 | **Entry**         | `MemoryManager.add()` — one line generates embedding + writes; search includes metadata filter / decay re-ranking / key-merge                               | Manually compose `Memory + Embedding + Store` objects; write your own eviction          |
 | **Tool layer**    | LangChain4j module + pure-Java `tools-core`; switch Spring AI / langgraph4j / custom bridge without rewriting                                               | Bundled with the official framework only                                                |
-| **Test-friendly** | `InMemoryMemoryStore` / `langgraph4j InMemoryStore` out-of-box; 160+ unit tests in milliseconds                                                             | Often needs containers or mocking the entire client layer                               |
+| **Test-friendly** | `InMemoryMemoryStore` / `langgraph4j InMemoryStore` out-of-box; 213+ unit tests in milliseconds                                                             | Often needs containers or mocking the entire client layer                                |
 
 Bottom line: **langMem4j is the "just enough" memory layer for Java developers — SPI + facade + time-driven strategies (decay / merge) + multi-backend adapters, without locking you into any LLM or DB.**
 
@@ -483,17 +542,19 @@ mvn -pl langmem4j-examples/langmem4j-example-plain \
 #   docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-Test matrix (`mvn test`, **165 tests all green ✅**, plus 4 `@Disabled` reserved methods):
+Test matrix (`mvn test`, **213 tests all green ✅**, plus 4 `@Disabled` reserved methods):
 
 | Module                    | Tests                                   | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| langmem4j-core            | **113 passed**                          | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · **MemoryManager (29: +5 compact — NONE noop / categoryGroup merge / old-keys deleted / empty ns noop / earliest createdAt; +9 decay/merge — decay filter & re-ranking / get refresh / merge longer & union / addAll merge)** · **MemoryFilter** (11) · **InMemoryMemoryStore-Filter** (5) · **MemoryDecayPolicy (11: NONE identity / half-life curve / lastAccessedAt over createdAt / custom halfLife / pruneThreshold override)** · **MemoryMergePolicy (10: NONE identity / longer value / metadata union / earliest createdAt / incoming-embedding / no input mutation)** · **MemoryCompactionPolicy (12: NONE identity / single-element skip / concatenation / metadata preserved / earliest createdAt / multi-group output / default group / empty list / no mutation / lastAccessedAt refreshed)** |
+| langmem4j-core            | **121 passed**                          | Memory (10) · InMemoryMemoryStore (18) · CosineSearch (7) · **MemoryManager (29: +5 compact — NONE noop / categoryGroup merge / old-keys deleted / empty ns noop / earliest createdAt; +9 decay/merge — decay filter & re-ranking / get refresh / merge longer & union / addAll merge)** · **MemoryManager-NamespaceResolver (8: resolver routes add/get / applies to search-keys-remove-compact / null & blank resolver result falls back to default / no default + unresolvable context fails fast / per-call consultation isolates context switches / explicit ns argument wins / no resolver = fixed default behavior)** · **MemoryFilter** (11) · **InMemoryMemoryStore-Filter** (5) · **MemoryDecayPolicy (11: NONE identity / half-life curve / lastAccessedAt over createdAt / custom halfLife / pruneThreshold override)** · **MemoryMergePolicy (10: NONE identity / longer value / metadata union / earliest createdAt / incoming-embedding / no input mutation)** · **MemoryCompactionPolicy (12: NONE identity / single-element skip / concatenation / metadata preserved / earliest createdAt / multi-group output / default group / empty list / no mutation / lastAccessedAt refreshed)** |
 | langmem4j-store-qdrant    | 4 passed **+ 4 @Disabled**              | QdrantMemoryStoreTest: deterministicId pure functions 4 cases (FNV×32/64/utf16-leak/Chinese); 4 integration test methods **@Disabled** (below)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **langmem4j-langgraph4j** | **7 passed**                            | LangGraph4jStoreAdapterTest: ①upsert+get round-trip (namespace non-empty / createdAt / embedding null) ②getByKey miss → empty ③deleteByKey → empty ④search keyword match (fruit 2 / blue 1) ⑤search limit=3 ⑥listKeys → UOE ⑦clearNamespace → UOE                                                                                                                                                                                                                                                                                                                                                        |
 | **langmem4j-strategy**    | **13 passed**                           | LlmSummarizationCompactionTest: ctor null validation / single-element skips LLM call / multi-group one summary per group / single-in-group stays as-is / category metadata preserved / earliest createdAt / key = category_compacted / no-category default group / empty list / LLM prompt contains original values / identity summarizer / no input mutation / lastAccessedAt refreshed                                                                                                                                                                                                                    |
 | langmem4j-tools-core      | **14 passed**                           | SaveMemoryService (6: ctor validation / KV parsing / boolean tags / empty metadata / delete / ns accessor); SearchMemoryService (8: get hit/miss / substring / empty msg / limit clamp 4 boundaries incl >20→20 / **metadata filter search** / list empty+non-empty / accessor)                                                                                                                                                                                                                                                                                                                          |
-| langmem4j-tools           | **14 passed**                           | SaveMemoryTool (7, thin-wrapper delegation + **namespace isolation**); SearchMemoryTool (7, thin-wrapper delegation)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Total**                 | **165 passed · 4 skipped · 0 failures** | All green ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| langmem4j-tools           | **14 passed**                           | SaveMemoryTool (7, thin-wrapper delegation + **namespace isolation**); SearchMemoryTool (7, thin-wrapper delegation)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **langmem4j-spring-boot-starter** | **32 passed**                   | LangMem4jAutoConfigurationTest (ApplicationContextRunner, no full Boot startup): ①default config → InMemoryMemoryStore + MemoryManager + default namespace ②decay/merge/compaction disabled by default ③decay.enabled → exponential + custom pruneThreshold + 2h half-life curve ④merge.enabled → keyMerge functional check ⑤compaction.enabled → categoryGroup ⑥custom default-namespace applied ⑦custom MemoryStore bean wins ⑧custom MemoryManager bean wins ⑨unknown store.type → startup fails ⑩compaction.policy=llm → fails fast with actionable message · **PatternNamespaceResolverTest (13)**: principal prefix / static template / header map indexing + elvis / header present read / missing variable → null / blank → null / **T() and constructors blocked (SimpleEvaluationContext)** / invalid template fails at construction / blank pattern rejected / principal-only cache hit (1 eval for 2 resolves, key switch re-evaluates) / header patterns never cached / cache LRU eviction bounded · **RequestNamespaceVariablesTest (4: headers wrapped under single `header` variable / case-insensitive lookup / empty-but-present in request / nothing outside request)** |
+| langmem4j-example-springboot | **8 passed**                          | DemoApplicationTest (@SpringBootTest + MockMvc): context loads with auto-configured manager / add-then-get round-trip with metadata / memory persists + search finds it / merge keeps longer value; CompactEndpointTest: `/api/memories/compact` reduces fragments to category summaries (isolated namespace); **MultiTenancyIsolationTest (RANDOM_PORT, real servlet container): alice/bob same key isolated namespaces / search scoped to requesting user / missing header → anonymous bucket** |
+| **Total**                 | **213 passed · 4 skipped · 0 failures** | All green ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 > **Integration test status**: V1 ships `QdrantMemoryStoreIntegrationTest` with `@Disabled` (4 E2E methods: ①upsert+get round-trip (metadata restore) ②search cosine ranking ③**search + MemoryFilter** (category=drink exact hit) ④delete + listKeys cleanup). To run locally:
 >
@@ -523,9 +584,11 @@ Test matrix (`mvn test`, **165 tests all green ✅**, plus 4 `@Disabled` reserve
 
 - [x] Plain Java examples (example-plain: PlainExample + ConversationMemoryDemo)
 
-- [ ] Spring Boot example (`example-springboot` is still a pom skeleton)
+- [x] **Spring Boot Starter** (`langmem4j-spring-boot-starter`): `langmem4j.*` properties → auto-configured `MemoryManager` / `MemoryStore` (inmemory / qdrant), decay / merge / compaction switches, `@ConditionalOnMissingBean` user-bean precedence; `compaction.policy=llm` intentionally fails fast (register `LlmSummarizationCompaction` as a bean instead)
 
-- [ ] Spring Boot Starter: `@EnableLangMem4j` auto-configuration
+- [x] Spring Boot example (`example-springboot`: yml-only config + `/api/memories` REST controller + @SpringBootTest integration tests)
+
+- [x] **Runtime namespace resolution** — `NamespaceResolver` SPI (core, zero framework deps) + starter `namespace-pattern` SpEL template (`#header` / `#principal`), `SimpleEvaluationContext` security whitelist, case-insensitive headers, optional result cache; multi-tenant isolation demo in `MultiTenancyIsolationTest`
 
 - [ ] Milvus / PGVector adapters (waiting for first real user demand)
 

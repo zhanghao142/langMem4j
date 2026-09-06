@@ -5,6 +5,7 @@ import com.langmem4j.core.memory.Memory;
 import com.langmem4j.core.memory.MemoryCompactionPolicy;
 import com.langmem4j.core.memory.MemoryDecayPolicy;
 import com.langmem4j.core.memory.MemoryMergePolicy;
+import com.langmem4j.core.namespace.NamespaceResolver;
 import com.langmem4j.core.store.MemoryFilter;
 import com.langmem4j.core.store.MemoryStore;
 import com.langmem4j.core.store.inmemory.InMemoryMemoryStore;
@@ -50,6 +51,7 @@ public class MemoryManager {
     private final MemoryStore store;
     private final EmbeddingGenerator embeddingGenerator;
     private final String defaultNamespace;
+    private final NamespaceResolver namespaceResolver;
     private final MemoryDecayPolicy decayPolicy;
     private final MemoryMergePolicy mergePolicy;
     private final MemoryCompactionPolicy compactionPolicy;
@@ -58,6 +60,7 @@ public class MemoryManager {
         this.store = builder.store;
         this.embeddingGenerator = builder.embeddingGenerator;
         this.defaultNamespace = builder.defaultNamespace;
+        this.namespaceResolver = builder.namespaceResolver;
         this.decayPolicy = builder.decayPolicy;
         this.mergePolicy = builder.mergePolicy;
         this.compactionPolicy = builder.compactionPolicy;
@@ -91,6 +94,7 @@ public class MemoryManager {
         private MemoryStore store;
         private EmbeddingGenerator embeddingGenerator;
         private String defaultNamespace;
+        private NamespaceResolver namespaceResolver = NamespaceResolver.FIXED;
         private MemoryDecayPolicy decayPolicy = MemoryDecayPolicy.NONE;
         private MemoryMergePolicy mergePolicy = MemoryMergePolicy.NONE;
         private MemoryCompactionPolicy compactionPolicy = MemoryCompactionPolicy.NONE;
@@ -116,6 +120,19 @@ public class MemoryManager {
          */
         public Builder withDefaultNamespace(String namespace) {
             this.defaultNamespace = namespace;
+            return this;
+        }
+
+        /**
+         * Sets the runtime namespace resolver used by the no-namespace
+         * variants of {@code add}, {@code search}, {@code get}, etc. On each
+         * call the resolver is consulted first; a {@code null}/blank result
+         * falls back to the configured default namespace. Default is
+         * {@link NamespaceResolver#FIXED} (always the default namespace —
+         * identical to previous behavior).
+         */
+        public Builder withNamespaceResolver(NamespaceResolver resolver) {
+            this.namespaceResolver = resolver == null ? NamespaceResolver.FIXED : resolver;
             return this;
         }
 
@@ -369,6 +386,11 @@ public class MemoryManager {
         return Optional.ofNullable(defaultNamespace);
     }
 
+    /** Returns the runtime namespace resolver (never null; FIXED by default). */
+    public NamespaceResolver namespaceResolver() {
+        return namespaceResolver;
+    }
+
     /** Returns the configured decay policy (never null). */
     public MemoryDecayPolicy decayPolicy() {
         return decayPolicy;
@@ -513,6 +535,13 @@ public class MemoryManager {
     }
 
     private String defaultNs() {
+        // Runtime resolution first — a non-blank result routes this call to
+        // the caller's context (multi-tenant). FIXED (the default) returns
+        // null and falls through to the configured default namespace.
+        String resolved = namespaceResolver.resolve();
+        if (resolved != null && !resolved.isBlank()) {
+            return resolved;
+        }
         if (defaultNamespace == null) {
             throw new IllegalStateException(
                     "No default namespace configured. Pass an explicit namespace or "

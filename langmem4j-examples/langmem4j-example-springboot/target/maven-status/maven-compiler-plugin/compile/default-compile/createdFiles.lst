@@ -1,1 +1,4 @@
+com\example\langmem4j\springboot\web\MemoryController.class
+com\example\langmem4j\springboot\DemoApplication.class
 com\langmem4j\example\springboot\package-info.class
+com\example\langmem4j\springboot\web\MemoryController$AddRequest.class

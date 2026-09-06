@@ -10,11 +10,25 @@
         <module name="langmem4j-tools-core" />
         <module name="langmem4j-example-springboot" />
         <module name="langmem4j-strategy" />
+        <module name="langmem4j-spring-boot-starter" />
         <module name="langmem4j-store-qdrant" />
         <module name="langmem4j-tools" />
         <module name="langmem4j-core" />
         <module name="langmem4j-langgraph4j" />
       </profile>
     </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="langmem4j-core" options="-parameters" />
+      <module name="langmem4j-example-plain" options="-parameters" />
+      <module name="langmem4j-example-springboot" options="-parameters" />
+      <module name="langmem4j-langgraph4j" options="-parameters" />
+      <module name="langmem4j-spring-boot-starter" options="-parameters" />
+      <module name="langmem4j-store-qdrant" options="-parameters" />
+      <module name="langmem4j-strategy" options="-parameters" />
+      <module name="langmem4j-tools" options="-parameters" />
+      <module name="langmem4j-tools-core" options="-parameters" />
+    </option>
   </component>
 </project>

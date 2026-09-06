@@ -1,0 +1,159 @@
+{
+  "groups": [
+    {
+      "name": "langmem4j",
+      "type": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties"
+    },
+    {
+      "name": "langmem4j.compaction",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Compaction",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getCompaction()"
+    },
+    {
+      "name": "langmem4j.decay",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Decay",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getDecay()"
+    },
+    {
+      "name": "langmem4j.merge",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Merge",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getMerge()"
+    },
+    {
+      "name": "langmem4j.namespace-cache",
+      "type": "com.langmem4j.spring.LangMem4jProperties$NamespaceCache",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getNamespaceCache()"
+    },
+    {
+      "name": "langmem4j.store",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Store",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "sourceMethod": "getStore()"
+    },
+    {
+      "name": "langmem4j.store.qdrant",
+      "type": "com.langmem4j.spring.LangMem4jProperties$Qdrant",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Store",
+      "sourceMethod": "getQdrant()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "langmem4j.compaction.enabled",
+      "type": "java.lang.Boolean",
+      "description": "When true, a MemoryCompactionPolicy bean is wired for compact().",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Compaction",
+      "defaultValue": false
+    },
+    {
+      "name": "langmem4j.compaction.policy",
+      "type": "java.lang.String",
+      "description": "Compaction policy: {@code category-group} (pure Java, V1) or {@code llm} (reserved for future versions — requires a ChatModel bean; wire LlmSummarizationCompaction manually for now).",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Compaction",
+      "defaultValue": "category-group"
+    },
+    {
+      "name": "langmem4j.decay.enabled",
+      "type": "java.lang.Boolean",
+      "description": "When false (default), no decay policy is applied.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Decay",
+      "defaultValue": false
+    },
+    {
+      "name": "langmem4j.decay.half-life",
+      "type": "java.time.Duration",
+      "description": "Half-life of memory relevance; factor halves every this period.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Decay",
+      "defaultValue": "7d"
+    },
+    {
+      "name": "langmem4j.decay.prune-threshold",
+      "type": "java.lang.Float",
+      "description": "Memories below this decay factor are hidden from search results.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Decay",
+      "defaultValue": 0.01
+    },
+    {
+      "name": "langmem4j.default-namespace",
+      "type": "java.lang.String",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties",
+      "defaultValue": "default"
+    },
+    {
+      "name": "langmem4j.merge.enabled",
+      "type": "java.lang.Boolean",
+      "description": "When true, rewrites of an existing key merge via keyMerge().",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Merge",
+      "defaultValue": false
+    },
+    {
+      "name": "langmem4j.namespace-cache.enabled",
+      "type": "java.lang.Boolean",
+      "description": "When true, principal-only patterns cache their rendered result.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$NamespaceCache",
+      "defaultValue": true
+    },
+    {
+      "name": "langmem4j.namespace-cache.expire-after-write",
+      "type": "java.time.Duration",
+      "description": "TTL of a cached result.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$NamespaceCache",
+      "defaultValue": "10m"
+    },
+    {
+      "name": "langmem4j.namespace-cache.max-size",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of cached results (LRU eviction).",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$NamespaceCache",
+      "defaultValue": 1000
+    },
+    {
+      "name": "langmem4j.namespace-pattern",
+      "type": "java.lang.String",
+      "description": "SpEL template for runtime namespace resolution, e.g. {@code user_#{#principal}} or {@code tenant_#{#header['X-Tenant-Id'] ?: 'anonymous'}}. When set, every no-namespace MemoryManager call routes to the namespace rendered from the current context; a null\/blank render (or a missing referenced variable) falls back to {@code default-namespace}. Leave unset for the classic static default namespace.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties"
+    },
+    {
+      "name": "langmem4j.store.qdrant.api-key",
+      "type": "java.lang.String",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Qdrant"
+    },
+    {
+      "name": "langmem4j.store.qdrant.host",
+      "type": "java.lang.String",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Qdrant",
+      "defaultValue": "localhost"
+    },
+    {
+      "name": "langmem4j.store.qdrant.port",
+      "type": "java.lang.Integer",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Qdrant",
+      "defaultValue": 6334
+    },
+    {
+      "name": "langmem4j.store.qdrant.use-tls",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Qdrant",
+      "defaultValue": false
+    },
+    {
+      "name": "langmem4j.store.qdrant.vector-size",
+      "type": "java.lang.Integer",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Qdrant",
+      "defaultValue": 1536
+    },
+    {
+      "name": "langmem4j.store.type",
+      "type": "java.lang.String",
+      "description": "Backend type: {@code inmemory} (default) or {@code qdrant}.",
+      "sourceType": "com.langmem4j.spring.LangMem4jProperties$Store",
+      "defaultValue": "inmemory"
+    }
+  ],
+  "hints": []
+}
